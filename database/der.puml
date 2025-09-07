@@ -1,0 +1,244 @@
+@startuml DER_Sistema_Gestao_Projetos
+!theme plain
+skinparam linetype ortho
+skinparam shadowing false
+
+' ======= ENTIDADES =======
+
+entity "USUARIO" as usuario {
+  * **id** : BIGINT <<PK>>
+  --
+  nome : VARCHAR(100)
+  email : VARCHAR(150) <<UNIQUE>>
+  ativo : BOOLEAN
+}
+
+entity "CREDENCIAL" as credencial {
+  * **id** : BIGINT <<PK>>
+  --
+  hash : VARCHAR(255)
+  salt : VARCHAR(100)
+  ultima_troca : TIMESTAMP
+  * usuario_id : BIGINT <<FK>>
+}
+
+entity "PAPEL" as papel {
+  * **id** : BIGINT <<PK>>
+  --
+  nome : VARCHAR(50) <<UNIQUE>>
+  descricao : VARCHAR(200)
+}
+
+entity "PERMISSAO" as permissao {
+  * **id** : BIGINT <<PK>>
+  --
+  chave : VARCHAR(100) <<UNIQUE>>
+  descricao : VARCHAR(200)
+}
+
+entity "USUARIO_PAPEL" as usuario_papel {
+  * **usuario_id** : BIGINT <<PK,FK>>
+  * **papel_id** : BIGINT <<PK,FK>>
+}
+
+entity "PAPEL_PERMISSAO" as papel_permissao {
+  * **papel_id** : BIGINT <<PK,FK>>
+  * **permissao_id** : BIGINT <<PK,FK>>
+}
+
+entity "EQUIPE" as equipe {
+  * **id** : BIGINT <<PK>>
+  --
+  nome : VARCHAR(100)
+  descricao : VARCHAR(500)
+  ativa : BOOLEAN
+}
+
+entity "MEMBRO_EQUIPE" as membro_equipe {
+  * **id** : BIGINT <<PK>>
+  --
+  papel : VARCHAR(50)
+  desde : DATE
+  ativo : BOOLEAN
+  * usuario_id : BIGINT <<FK>>
+  * equipe_id : BIGINT <<FK>>
+}
+
+entity "PROJETO" as projeto {
+  * **id** : BIGINT <<PK>>
+  --
+  nome : VARCHAR(150)
+  descricao : TEXT
+  data_inicio_prevista : DATE
+  data_fim_prevista : DATE
+  data_inicio_real : DATE
+  data_fim_real : DATE
+  status : VARCHAR(20)
+  * gerente_id : BIGINT <<FK>>
+}
+
+entity "PROJETO_EQUIPE" as projeto_equipe {
+  * **id** : BIGINT <<PK>>
+  --
+  papel_equipe : VARCHAR(100)
+  * projeto_id : BIGINT <<FK>>
+  * equipe_id : BIGINT <<FK>>
+}
+
+entity "TAREFA" as tarefa {
+  * **id** : BIGINT <<PK>>
+  --
+  titulo : VARCHAR(200)
+  descricao : TEXT
+  status : VARCHAR(20)
+  prioridade : INTEGER
+  data_inicio_prevista : DATE
+  data_fim_prevista : DATE
+  data_inicio_real : DATE
+  data_fim_real : DATE
+  * projeto_id : BIGINT <<FK>>
+  responsavel_id : BIGINT <<FK>>
+}
+
+entity "HISTORICO_TAREFA" as historico_tarefa {
+  * **id** : BIGINT <<PK>>
+  --
+  data_hora : TIMESTAMP
+  campo_alterado : VARCHAR(100)
+  valor_anterior : TEXT
+  valor_novo : TEXT
+  motivo : VARCHAR(500)
+  * tarefa_id : BIGINT <<FK>>
+  * usuario_id : BIGINT <<FK>>
+}
+
+entity "LOG_ACESSO" as log_acesso {
+  * **id** : BIGINT <<PK>>
+  --
+  acao : VARCHAR(50)
+  data_hora : TIMESTAMP
+  ip : VARCHAR(45)
+  sucesso : BOOLEAN
+  * usuario_id : BIGINT <<FK>>
+}
+
+entity "LOG_ATIVIDADE" as log_atividade {
+  * **id** : BIGINT <<PK>>
+  --
+  entidade : VARCHAR(100)
+  entidade_id : BIGINT
+  acao : VARCHAR(20)
+  data_hora : TIMESTAMP
+  detalhes : TEXT
+  * usuario_id : BIGINT <<FK>>
+}
+
+' ======= TABELAS DE DOMÍNIO (ENUM) =======
+
+entity "STATUS_PROJETO" as status_projeto {
+  * **codigo** : VARCHAR(20) <<PK>>
+  --
+  descricao : VARCHAR(100)
+}
+
+entity "STATUS_TAREFA" as status_tarefa {
+  * **codigo** : VARCHAR(20) <<PK>>
+  --
+  descricao : VARCHAR(100)
+}
+
+' ======= RELACIONAMENTOS =======
+
+' Usuario - Credencial (1:1)
+usuario ||--|| credencial : "possui"
+
+' Usuario - Papel (N:N)
+usuario ||--o{ usuario_papel
+papel ||--o{ usuario_papel
+
+' Papel - Permissao (N:N)
+papel ||--o{ papel_permissao
+permissao ||--o{ papel_permissao
+
+' Usuario - Equipe (N:N via MembroEquipe)
+usuario ||--o{ membro_equipe
+equipe ||--o{ membro_equipe
+
+' Projeto - Usuario (N:1 - gerente)
+projeto }o--|| usuario : "gerenciado por"
+
+' Projeto - Equipe (N:N)
+projeto ||--o{ projeto_equipe
+equipe ||--o{ projeto_equipe
+
+' Projeto - Tarefa (1:N)
+projeto ||--o{ tarefa : "contém"
+
+' Tarefa - Usuario (N:1 - responsável)
+tarefa }o--o| usuario : "responsável"
+
+' Tarefa - HistoricoTarefa (1:N)
+tarefa ||--o{ historico_tarefa : "registra"
+
+' Usuario - HistoricoTarefa (1:N - quem alterou)
+usuario ||--o{ historico_tarefa : "altera"
+
+' Usuario - LogAcesso (1:N)
+usuario ||--o{ log_acesso : "gera"
+
+' Usuario - LogAtividade (1:N)
+usuario ||--o{ log_atividade : "executa"
+
+' Relacionamentos com tabelas de domínio
+projeto }o--|| status_projeto : "possui status"
+tarefa }o--|| status_tarefa : "possui status"
+
+' ======= NOTAS/REGRAS DE NEGÓCIO =======
+
+note top of projeto
+  **Regras de Negócio:**
+  • Status CANCELADO bloqueia criação/edição de Tarefa
+  • Cada Projeto tem exatamente 1 gerente
+  • Datas reais podem ser NULL até execução
+end note
+
+note right of historico_tarefa
+  **Auditoria:**
+  • Tabela imutável (somente INSERT)
+  • Registra todas as alterações de Tarefa
+  • Inclui quem alterou e quando
+end note
+
+note bottom of usuario_papel
+  **RBAC:**
+  • Controle de acesso baseado em papéis
+  • Usuário pode ter múltiplos papéis
+  • Papel pode ter múltiplas permissões
+end note
+
+note left of log_acesso
+  **Segurança:**
+  • Rastreia tentativas de login
+  • Armazena IP para auditoria
+  • Registra sucessos e falhas
+end note
+
+note bottom of status_projeto
+  **Valores:**
+  • PLANEJADO
+  • EM_ANDAMENTO  
+  • PAUSADO
+  • CANCELADO
+  • CONCLUIDO
+end note
+
+note bottom of status_tarefa
+  **Valores:**
+  • NOVA
+  • EM_ANDAMENTO
+  • BLOQUEADA
+  • CONCLUIDA
+  • CANCELADA
+end note
+
+@enduml

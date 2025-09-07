@@ -1,0 +1,54 @@
+Sistema de Gestão de Projetos e Equipes
+
+Demanda: Construir um Sistema para Gestão de Projetos e também das Equipes, objetivando uma gestão eficaz dos projetos, das tarefas para o projeto, das equipes envolvidas, prazos de entregas para os entregáveis, assim como emitir relatórios de desempenho para cada projeto.
+
+Tecnologias Envolvidas: Java com interface visual (Swing, JavaFX ou similar), conectado a um banco de dados MySQL.
+
+Perfis de Acesso: Administrador, gerente de projeto, colaborador.
+
+// Requisitos Iniciais: 
+
+Cadastro de Usuários
+a) Nome completo, CPF, e-mail, cargo, login, senha
+b) Cada usuário deve ter um perfil: administrador, gerente ou colaborador
+
+Cadastro de Projetos
+c) Nome do projeto, descrição, data de início, data de término prevista, status (planejado, em andamento, concluído, cancelado)
+d) Cada projeto deve ter um gerente responsável
+
+Cadastro de Equipes
+e) Nome da equipe, descrição, membros (usuários vinculados)
+f) Uma equipe pode atuar em vários projetos
+
+Alocação de Equipes e Projetos
+g) Um projeto pode ter mais de uma equipe envolvida
+h) Uma equipe pode atuar em mais de um projeto 
+
+Cadastro de Tarefas
+i) Título, descrição, projeto vinculado, responsável (usuário), status (pendente, em execução, concluída), data de início e fim previstas e reais
+j) Cada tarefa pertence a um único projeto
+
+Relatórios e Dashboards
+k) Resumo de andamento dos projetos
+l) Desempenho de cada colaborador (tarefas atribuídas e concluídas)
+m) Projetos com risco de atraso (data atual > data prevista de término)
+
+Autenticação
+n) Tela de login com validação no banco de dados
+
+Interface visual amigável
+o) Prototipar telas antes de codificar
+p) Interface deve permitir fácil navegação, cadastro, edição e visualização dos dados
+
+
+// Requisitos Implícitos: 
+
+- Como será feita a vinculação entre tarefas, projetos e colaboradores
+- É possível que um colaborador esteja em mais de uma equipe?
+- O que acontece com as tarefas se o projeto for cancelado?
+- Será necessário histórico de alterações nos status das tarefas?
+- Como controlar quem pode alterar o quê, com base no perfil do usuário?
+- De que forma será feito o relacionamento entre tabelas no banco?
+- Qual a melhor forma de organizar os pacotes na aplicação Java?
+- Haverá necessidade de logs de acesso ou atividades do sistema?
+- Qual o tratamento ideal para campos obrigatórios e validação de formulário?

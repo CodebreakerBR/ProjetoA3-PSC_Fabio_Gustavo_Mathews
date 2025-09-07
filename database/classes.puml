@@ -1,0 +1,216 @@
+@startuml
+hide circle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+package "domain" {
+  class Usuario {
+    +id: Long
+    +nome: String
+    +email: String
+    +ativo: boolean
+  }
+
+  class Credencial {
+    +id: Long
+    +hash: String
+    +salt: String
+    +ultimaTroca: LocalDateTime
+  }
+
+  class Papel {
+    +id: Long
+    +nome: String  // ADMIN, GERENTE, COLABORADOR
+    +descricao: String
+  }
+
+  class Permissao {
+    +id: Long
+    +chave: String  // ex: USUARIO_CRUD, PROJETO_EDITAR
+    +descricao: String
+  }
+
+  class Equipe {
+    +id: Long
+    +nome: String
+    +descricao: String
+    +ativa: boolean
+  }
+
+  class MembroEquipe {
+    +id: Long
+    +papel: String  // ex: Dev, QA, PO
+    +desde: LocalDate
+    +ativo: boolean
+  }
+
+  class Projeto {
+    +id: Long
+    +nome: String
+    +descricao: String
+    +dataInicioPrevista: LocalDate
+    +dataFimPrevista: LocalDate
+    +dataInicioReal: LocalDate
+    +dataFimReal: LocalDate
+    +status: StatusProjeto
+  }
+
+  enum StatusProjeto {
+    PLANEJADO
+    EM_ANDAMENTO
+    PAUSADO
+    CANCELADO
+    CONCLUIDO
+  }
+
+  class ProjetoEquipe {
+    +id: Long
+    +papelEquipe: String // ex: Equipe Líder, Apoio
+  }
+
+  class Tarefa {
+    +id: Long
+    +titulo: String
+    +descricao: String
+    +status: StatusTarefa
+    +prioridade: int
+    +dataInicioPrevista: LocalDate
+    +dataFimPrevista: LocalDate
+    +dataInicioReal: LocalDate
+    +dataFimReal: LocalDate
+  }
+
+  enum StatusTarefa {
+    NOVA
+    EM_ANDAMENTO
+    BLOQUEADA
+    CONCLUIDA
+    CANCELADA
+  }
+
+  class HistoricoTarefa {
+    +id: Long
+    +dataHora: LocalDateTime
+    +campoAlterado: String
+    +valorAnterior: String
+    +valorNovo: String
+    +motivo: String
+  }
+
+  class LogAcesso {
+    +id: Long
+    +acao: String      // LOGIN, LOGOUT, FALHA_LOGIN
+    +dataHora: LocalDateTime
+    +ip: String
+    +sucesso: boolean
+  }
+
+  class LogAtividade {
+    +id: Long
+    +entidade: String  // Usuario, Projeto, Tarefa...
+    +entidadeId: Long
+    +acao: String      // CREATE, UPDATE, DELETE
+    +dataHora: LocalDateTime
+    +detalhes: String
+  }
+}
+
+' ======= Relacionamentos de domínio =======
+Usuario "1" -- "0..1" Credencial : possui >
+Usuario "1" -- "0..*" LogAcesso : gera >
+Usuario "1" -- "0..*" LogAtividade : executa >
+
+Usuario "1" -- "0..*" MembroEquipe
+Equipe  "1" -- "0..*" MembroEquipe
+
+Projeto "1" o-- "0..*" Tarefa : contém >
+Tarefa  "0..*" -- "0..1" Usuario : responsável >
+Usuario "1" -- "0..*" Projeto : gerente >
+
+Projeto "1" -- "0..*" ProjetoEquipe
+Equipe  "1" -- "0..*" ProjetoEquipe
+
+Tarefa  "1" -- "0..*" HistoricoTarefa : registra >
+
+' ======= RBAC (Papel-Permissão-Usuário) =======
+Papel "0..*" -- "0..*" Permissao : contém >
+Usuario "0..*" -- "0..*" Papel : recebe >
+
+' ======= Notas/Regras de Negócio =======
+note top of Projeto
+  Regras:
+  - status=CANCELADO bloqueia criação/edição de Tarefa
+  - Cada Projeto tem 1 gerente (Usuario)
+end note
+
+note top of HistoricoTarefa
+  Imutável: somente append
+  Captura: quem alterou (via LogAtividade)
+end note
+
+note right of LogAcesso
+  Auditoria de autenticação
+end note
+
+note right of MembroEquipe
+  Associação N:N entre Usuario e Equipe
+end note
+
+note bottom of ProjetoEquipe
+  Associação N:N entre Equipe e Projeto
+end note
+
+' ======= Serviços (camada de aplicação) =======
+package "service" {
+  interface UsuarioService {
+    +criar(u: Usuario): Usuario
+    +atualizar(u: Usuario): Usuario
+    +buscarPorEmail(email: String): Usuario
+  }
+  interface ProjetoService {
+    +criar(p: Projeto): Projeto
+    +atribuirGerente(p: Projeto, u: Usuario)
+    +alocarEquipe(p: Projeto, e: Equipe)
+  }
+  interface EquipeService {
+    +criar(e: Equipe): Equipe
+    +adicionarMembro(e: Equipe, u: Usuario, papel: String)
+  }
+  interface TarefaService {
+    +criar(t: Tarefa, p: Projeto): Tarefa
+    +atribuirResponsavel(t: Tarefa, u: Usuario)
+    +mudarStatus(t: Tarefa, s: StatusTarefa)
+  }
+  interface AuthService {
+    +autenticar(email: String, senha: String): Usuario
+    +trocarSenha(u: Usuario, novaSenha: String)
+    +registrarAcesso(u: Usuario, sucesso: boolean)
+  }
+  interface RelatorioService {
+    +gerarDesempenho(p: Projeto): byte[]
+    +gerarRiscoAtraso(p: Projeto): byte[]
+  }
+}
+
+' ======= Repositórios (persistência / DAO) =======
+package "repository" {
+  interface UsuarioRepository
+  interface ProjetoRepository
+  interface EquipeRepository
+  interface TarefaRepository
+  interface LogRepository
+}
+
+' Dependências Service -> Repository
+UsuarioService ..> UsuarioRepository
+ProjetoService ..> ProjetoRepository
+EquipeService  ..> EquipeRepository
+TarefaService  ..> TarefaRepository
+AuthService    ..> UsuarioRepository
+AuthService    ..> LogRepository
+RelatorioService ..> ProjetoRepository
+RelatorioService ..> TarefaRepository
+
+@enduml

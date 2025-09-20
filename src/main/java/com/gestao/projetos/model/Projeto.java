@@ -1,39 +1,52 @@
+
 package com.gestao.projetos.model;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
-/**
- * Classe que representa um projeto no sistema
- */
 public class Projeto {
+
+    // Atributos principais
     private Long id;
     private String nome;
     private String descricao;
+    private LocalDate dataInicio;
+    private LocalDate dataTerminoPrevista;
+    private String status;
+    private String responsavel;
+
+    // Atributos adicionais
     private LocalDate dataInicioPrevista;
     private LocalDate dataFimPrevista;
     private LocalDate dataInicioReal;
     private LocalDate dataFimReal;
-    private StatusProjeto status;
-    private Usuario gerente;
     private Long gerenteId;
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
 
-    // Construtores
+    // Construtor vazio
     public Projeto() {
-        this.status = StatusProjeto.PLANEJADO;
-        this.criadoEm = LocalDateTime.now();
-        this.atualizadoEm = LocalDateTime.now();
     }
 
-    public Projeto(String nome, String descricao, Usuario gerente) {
-        this();
+    // Construtor completo
+    public Projeto(Long id, String nome, String descricao, LocalDate dataInicio, LocalDate dataTerminoPrevista,
+                   String status, String responsavel, LocalDate dataInicioPrevista, LocalDate dataFimPrevista,
+                   LocalDate dataInicioReal, LocalDate dataFimReal, Long gerenteId,
+                   LocalDateTime criadoEm, LocalDateTime atualizadoEm) {
+        this.id = id;
         this.nome = nome;
         this.descricao = descricao;
-        this.gerente = gerente;
-        this.gerenteId = gerente != null ? gerente.getId() : null;
+        this.dataInicio = dataInicio;
+        this.dataTerminoPrevista = dataTerminoPrevista;
+        this.status = status;
+        this.responsavel = responsavel;
+        this.dataInicioPrevista = dataInicioPrevista;
+        this.dataFimPrevista = dataFimPrevista;
+        this.dataInicioReal = dataInicioReal;
+        this.dataFimReal = dataFimReal;
+        this.gerenteId = gerenteId;
+        this.criadoEm = criadoEm;
+        this.atualizadoEm = atualizadoEm;
     }
 
     // Getters e Setters
@@ -51,7 +64,6 @@ public class Projeto {
 
     public void setNome(String nome) {
         this.nome = nome;
-        this.atualizadoEm = LocalDateTime.now();
     }
 
     public String getDescricao() {
@@ -60,7 +72,38 @@ public class Projeto {
 
     public void setDescricao(String descricao) {
         this.descricao = descricao;
-        this.atualizadoEm = LocalDateTime.now();
+    }
+
+    public LocalDate getDataInicio() {
+        return dataInicio;
+    }
+
+    public void setDataInicio(LocalDate dataInicio) {
+        this.dataInicio = dataInicio;
+    }
+
+    public LocalDate getDataTerminoPrevista() {
+        return dataTerminoPrevista;
+    }
+
+    public void setDataTerminoPrevista(LocalDate dataTerminoPrevista) {
+        this.dataTerminoPrevista = dataTerminoPrevista;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getResponsavel() {
+        return responsavel;
+    }
+
+    public void setResponsavel(String responsavel) {
+        this.responsavel = responsavel;
     }
 
     public LocalDate getDataInicioPrevista() {
@@ -69,7 +112,6 @@ public class Projeto {
 
     public void setDataInicioPrevista(LocalDate dataInicioPrevista) {
         this.dataInicioPrevista = dataInicioPrevista;
-        this.atualizadoEm = LocalDateTime.now();
     }
 
     public LocalDate getDataFimPrevista() {
@@ -78,7 +120,6 @@ public class Projeto {
 
     public void setDataFimPrevista(LocalDate dataFimPrevista) {
         this.dataFimPrevista = dataFimPrevista;
-        this.atualizadoEm = LocalDateTime.now();
     }
 
     public LocalDate getDataInicioReal() {
@@ -87,7 +128,6 @@ public class Projeto {
 
     public void setDataInicioReal(LocalDate dataInicioReal) {
         this.dataInicioReal = dataInicioReal;
-        this.atualizadoEm = LocalDateTime.now();
     }
 
     public LocalDate getDataFimReal() {
@@ -96,26 +136,6 @@ public class Projeto {
 
     public void setDataFimReal(LocalDate dataFimReal) {
         this.dataFimReal = dataFimReal;
-        this.atualizadoEm = LocalDateTime.now();
-    }
-
-    public StatusProjeto getStatus() {
-        return status;
-    }
-
-    public void setStatus(StatusProjeto status) {
-        this.status = status;
-        this.atualizadoEm = LocalDateTime.now();
-    }
-
-    public Usuario getGerente() {
-        return gerente;
-    }
-
-    public void setGerente(Usuario gerente) {
-        this.gerente = gerente;
-        this.gerenteId = gerente != null ? gerente.getId() : null;
-        this.atualizadoEm = LocalDateTime.now();
     }
 
     public Long getGerenteId() {
@@ -124,7 +144,6 @@ public class Projeto {
 
     public void setGerenteId(Long gerenteId) {
         this.gerenteId = gerenteId;
-        this.atualizadoEm = LocalDateTime.now();
     }
 
     public LocalDateTime getCriadoEm() {
@@ -143,42 +162,10 @@ public class Projeto {
         this.atualizadoEm = atualizadoEm;
     }
 
-    // Métodos auxiliares
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Projeto projeto = (Projeto) o;
-        return Objects.equals(id, projeto.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
-    public String toString() {
-        return nome + " (" + status.getDescricao() + ")";
-    }
-
-    // Validações
+    // Método de validação simples
     public boolean isValid() {
-        return nome != null && !nome.trim().isEmpty() &&
-               gerenteId != null &&
-               (dataFimPrevista == null || dataInicioPrevista == null || 
-                !dataFimPrevista.isBefore(dataInicioPrevista));
-    }
-
-    public boolean isAtrasado() {
-        if (dataFimPrevista == null || status == StatusProjeto.CONCLUIDO || 
-            status == StatusProjeto.CANCELADO) {
-            return false;
-        }
-        return LocalDate.now().isAfter(dataFimPrevista);
-    }
-
-    public boolean isAtivo() {
-        return status != StatusProjeto.CANCELADO && status != StatusProjeto.CONCLUIDO;
+        return nome != null && !nome.isEmpty()
+            && dataInicio != null
+            && dataTerminoPrevista != null;
     }
 }

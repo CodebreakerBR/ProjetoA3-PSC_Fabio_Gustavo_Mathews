@@ -21,6 +21,7 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
     
     private static final Logger logger = LoggerFactory.getLogger(ProjetoDAO.class);
     private final UsuarioDAO usuarioDAO;
+    private Long id;
     
     // Queries SQL
     private static final String INSERT_SQL = 
@@ -106,7 +107,7 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
             
             LocalDateTime now = LocalDateTime.now();
             projeto.setCriadoEm(now);
-            projeto.setAtualizadoEm(now);
+            projeto.setCriadoEm(now);
             
             statement.setString(1, projeto.getNome());
             statement.setString(2, projeto.getDescricao());
@@ -118,7 +119,7 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
                 Date.valueOf(projeto.getDataInicioReal()) : null);
             statement.setDate(6, projeto.getDataFimReal() != null ? 
                 Date.valueOf(projeto.getDataFimReal()) : null);
-            statement.setString(7, projeto.getStatus().getCodigo());
+            statement.setString(7, projeto.getStatus());
             statement.setLong(8, projeto.getGerenteId());
             statement.setTimestamp(9, Timestamp.valueOf(projeto.getCriadoEm()));
             statement.setTimestamp(10, Timestamp.valueOf(projeto.getAtualizadoEm()));
@@ -153,9 +154,8 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
 
     @Override
     public Projeto update(Projeto projeto) throws SQLException {
-        if (projeto == null || !projeto.isValid() || projeto.getId() == null) {
+        if ((projeto == null) || !projeto.isValid() || (projeto.getId())
             throw new IllegalArgumentException("Projeto inválido para atualização");
-        }
 
         Connection connection = null;
         PreparedStatement statement = null;
@@ -176,7 +176,7 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
                 Date.valueOf(projeto.getDataInicioReal()) : null);
             statement.setDate(6, projeto.getDataFimReal() != null ? 
                 Date.valueOf(projeto.getDataFimReal()) : null);
-            statement.setString(7, projeto.getStatus().getCodigo());
+            statement.setString(7, projeto.getStatus());
             statement.setLong(8, projeto.getGerenteId());
             statement.setTimestamp(9, Timestamp.valueOf(projeto.getAtualizadoEm()));
             statement.setLong(10, projeto.getId());

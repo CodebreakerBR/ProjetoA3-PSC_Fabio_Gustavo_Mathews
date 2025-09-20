@@ -154,8 +154,10 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
 
     @Override
     public Projeto update(Projeto projeto) throws SQLException {
-        if ((projeto == null) || !projeto.isValid() || (projeto.getId())
+
+        if (!projeto.isValid() || projeto.getId() == null || projeto.getId() <= 0) {
             throw new IllegalArgumentException("Projeto inválido para atualização");
+        }
 
         Connection connection = null;
         PreparedStatement statement = null;
@@ -163,29 +165,29 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
         try {
             connection = DatabaseUtil.getConnection();
             statement = connection.prepareStatement(UPDATE_SQL);
-            
+
             projeto.setAtualizadoEm(LocalDateTime.now());
-            
+
             statement.setString(1, projeto.getNome());
             statement.setString(2, projeto.getDescricao());
-            statement.setDate(3, projeto.getDataInicioPrevista() != null ? 
+            statement.setDate(3, projeto.getDataInicioPrevista() != null ?
                 Date.valueOf(projeto.getDataInicioPrevista()) : null);
-            statement.setDate(4, projeto.getDataFimPrevista() != null ? 
+            statement.setDate(4, projeto.getDataFimPrevista() != null ?
                 Date.valueOf(projeto.getDataFimPrevista()) : null);
-            statement.setDate(5, projeto.getDataInicioReal() != null ? 
+            statement.setDate(5, projeto.getDataInicioReal() != null ?
                 Date.valueOf(projeto.getDataInicioReal()) : null);
-            statement.setDate(6, projeto.getDataFimReal() != null ? 
+            statement.setDate(6, projeto.getDataFimReal() != null ?
                 Date.valueOf(projeto.getDataFimReal()) : null);
             statement.setString(7, projeto.getStatus());
             statement.setLong(8, projeto.getGerenteId());
             statement.setTimestamp(9, Timestamp.valueOf(projeto.getAtualizadoEm()));
             statement.setLong(10, projeto.getId());
-            
+
             int affectedRows = statement.executeUpdate();
             if (affectedRows == 0) {
                 throw new SQLException("Projeto não encontrado para atualização: " + projeto.getId());
             }
-            
+
             DatabaseUtil.commit(connection);
             logger.info("Projeto atualizado com sucesso: {}", projeto.getNome());
             
@@ -419,7 +421,7 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
         
         String status = rs.getString("status");
         if (status != null) {
-            projeto.setStatus(StatusProjeto.fromCodigo(status));
+            projeto.setStatus(String.valueOf(String.valueOf(StatusProjeto.fromCodigo(status))));
         }
         
         projeto.setGerenteId(rs.getLong("gerente_id"));
@@ -432,7 +434,7 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
             gerente.setNome(gerenteNome);
             gerente.setEmail(rs.getString("gerente_email"));
             gerente.setAtivo(rs.getBoolean("gerente_ativo"));
-            projeto.setGerente(gerente);
+            projeto.setGerenteId(gerente.getId());
         }
         
         Timestamp criadoEm = rs.getTimestamp("criado_em");

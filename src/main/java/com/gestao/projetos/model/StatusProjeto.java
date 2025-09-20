@@ -26,8 +26,8 @@ public enum StatusProjeto {
         return descricao;
     }
 
-    public static StatusProjeto fromCodigo(String codigo) {
-        for (StatusProjeto status : values()) {
+    public static String fromCodigo(String codigo) {
+        for (String status : values()) {
             if (status.codigo.equals(codigo)) {
                 return status;
             }

@@ -26,14 +26,34 @@ public enum StatusProjeto {
         return descricao;
     }
 
-    public static String fromCodigo(String codigo) {
-        for (String status : values()) {
-            if (status.codigo.equals(codigo)) {
-                return status;
-            }
+    public enum StatusProjeto2 {
+        EM_ANDAMENTO("EM"),
+        CONCLUIDO("CO"),
+        CANCELADO("CA");
+
+        private String codigo;
+
+        StatusProjeto2(String em) {
         }
-        throw new IllegalArgumentException("Status de projeto inválido: " + codigo);
+
+        void StatusProjeto(String codigo) {
+            this.codigo = codigo;
+        }
+
+        public String getCodigo() {
+            return codigo;
+        }
+
+        public static StatusProjeto fromCodigo(String codigo) {
+            for (StatusProjeto status : values()) {
+                if (status.getCodigo().equals(codigo)) {
+                    return status;
+                }
+            }
+            throw new IllegalArgumentException("Status de projeto inválido: " + codigo);
+        }
     }
+
 
     @Override
     public String toString() {

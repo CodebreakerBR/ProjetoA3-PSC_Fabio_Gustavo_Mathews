@@ -2,16 +2,20 @@ package com.gestao.projetos.view;
 
 import javax.swing.*;
 import java.awt.*;
+import com.gestao.projetos.view.ProjetoView;
 
-public class ProjetoView extends JFrame {
+public class ProjetoView extends JInternalFrame {
 
     private JPanel membrosPanel;
 
     public ProjetoView() {
         setTitle("Cadastro de Projetos");
         setSize(600, 500);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+        setClosable(true);
+        setMaximizable(true);
+        setIconifiable(true);
+        setResizable(true);
+
 
 // Painel principal com BoxLayout
         JPanel painelPrincipal = new JPanel();

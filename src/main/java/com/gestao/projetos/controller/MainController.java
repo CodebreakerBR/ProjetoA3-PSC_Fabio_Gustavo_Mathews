@@ -4,6 +4,7 @@ import com.gestao.projetos.view.*;
 import com.gestao.projetos.util.DatabaseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.gestao.projetos.view.ProjetoView;
 
 import javax.swing.*;
 
@@ -24,7 +25,6 @@ public class MainController {
      */
     public void abrirGestaoUsuarios() {
         try {
-            // Verifica se já existe uma janela aberta
             JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
             for (JInternalFrame frame : frames) {
                 if (frame instanceof UsuarioFrame) {
@@ -33,60 +33,88 @@ public class MainController {
                     return;
                 }
             }
-            
-            // Cria nova janela
+
             UsuarioFrame usuarioFrame = new UsuarioFrame();
             mainFrame.addInternalFrame(usuarioFrame);
             usuarioFrame.setVisible(true);
-            
             mainFrame.updateStatusMessage("Gestão de Usuários aberta");
-            
+
         } catch (Exception e) {
             logger.error("Erro ao abrir gestão de usuários", e);
             JOptionPane.showMessageDialog(
-                mainFrame,
-                "Erro ao abrir gestão de usuários: " + e.getMessage(),
-                "Erro",
-                JOptionPane.ERROR_MESSAGE
+                    mainFrame,
+                    "Erro ao abrir gestão de usuários: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
             );
         }
     }
+
 
     /**
      * Abre a janela de gestão de projetos
      */
     public void abrirGestaoProjetos() {
         try {
-            // Implementação futura
-            JOptionPane.showMessageDialog(
-                mainFrame,
-                "Gestão de Projetos será implementada em breve",
-                "Em Desenvolvimento",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            
+            // Verifica se já existe uma janela aberta
+            JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
+            for (JInternalFrame frame : frames) {
+                if (frame instanceof ProjetoView) {
+                    frame.toFront();
+                    frame.setSelected(true);
+                    return;
+                }
+            }
+
+            // Cria nova janela
+            ProjetoView projetoView = new ProjetoView();
+            mainFrame.addInternalFrame(projetoView);
+            projetoView.setVisible(true);
+            mainFrame.updateStatusMessage("Gestão de Projetos aberta");
+
         } catch (Exception e) {
             logger.error("Erro ao abrir gestão de projetos", e);
+            JOptionPane.showMessageDialog(
+                    mainFrame,
+                    "Erro ao abrir gestão de projetos: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
+
+
 
     /**
      * Abre a janela de gestão de equipes
      */
     public void abrirGestaoEquipes() {
         try {
-            // Implementação futura
-            JOptionPane.showMessageDialog(
-                mainFrame,
-                "Gestão de Equipes será implementada em breve",
-                "Em Desenvolvimento",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            
+            JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
+            for (JInternalFrame frame : frames) {
+                if (frame instanceof EquipeView) {
+                    frame.toFront();
+                    frame.setSelected(true);
+                    return;
+                }
+            }
+
+            EquipeView equipeView = new EquipeView();
+            mainFrame.addInternalFrame(equipeView);
+            equipeView.setVisible(true);
+            mainFrame.updateStatusMessage("Gestão de Equipes aberta");
+
         } catch (Exception e) {
             logger.error("Erro ao abrir gestão de equipes", e);
+            JOptionPane.showMessageDialog(
+                    mainFrame,
+                    "Erro ao abrir gestão de equipes: " + e.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
+
 
     /**
      * Abre a janela de gestão de tarefas

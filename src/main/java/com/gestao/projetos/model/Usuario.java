@@ -10,6 +10,7 @@ public class Usuario {
     private Long id;
     private String nome;
     private String email;
+    private String cargo;
     private boolean ativo;
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;

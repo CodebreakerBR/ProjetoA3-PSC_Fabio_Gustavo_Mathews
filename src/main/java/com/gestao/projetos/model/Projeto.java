@@ -3,6 +3,8 @@ package com.gestao.projetos.model;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import com.gestao.projetos.model.Usuario;
 
 public class Projeto {
 
@@ -24,29 +26,11 @@ public class Projeto {
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
 
+    // Membros vinculados ao projeto
+    private List<Usuario> membros;
+
     // Construtor vazio
     public Projeto() {
-    }
-
-    // Construtor completo
-    public Projeto(Long id, String nome, String descricao, LocalDate dataInicio, LocalDate dataTerminoPrevista,
-                   String status, String responsavel, LocalDate dataInicioPrevista, LocalDate dataFimPrevista,
-                   LocalDate dataInicioReal, LocalDate dataFimReal, Long gerenteId,
-                   LocalDateTime criadoEm, LocalDateTime atualizadoEm) {
-        this.id = id;
-        this.nome = nome;
-        this.descricao = descricao;
-        this.dataInicio = dataInicio;
-        this.dataTerminoPrevista = dataTerminoPrevista;
-        this.status = status;
-        this.responsavel = responsavel;
-        this.dataInicioPrevista = dataInicioPrevista;
-        this.dataFimPrevista = dataFimPrevista;
-        this.dataInicioReal = dataInicioReal;
-        this.dataFimReal = dataFimReal;
-        this.gerenteId = gerenteId;
-        this.criadoEm = criadoEm;
-        this.atualizadoEm = atualizadoEm;
     }
 
     // Getters e Setters
@@ -160,6 +144,14 @@ public class Projeto {
 
     public void setAtualizadoEm(LocalDateTime atualizadoEm) {
         this.atualizadoEm = atualizadoEm;
+    }
+
+    public List<Usuario> getMembros() {
+        return membros;
+    }
+
+    public void setMembros(List<Usuario> membros) {
+        this.membros = membros;
     }
 
     // Método de validação simples

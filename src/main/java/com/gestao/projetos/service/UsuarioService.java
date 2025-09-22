@@ -18,7 +18,7 @@ public class UsuarioService {
     
     private static final Logger logger = LoggerFactory.getLogger(UsuarioService.class);
     private final UsuarioDAO usuarioDAO;
-    
+
     public UsuarioService() {
         this.usuarioDAO = new UsuarioDAO();
     }
@@ -43,6 +43,7 @@ public class UsuarioService {
         
         return usuarioDAO.save(usuario);
     }
+
 
     /**
      * Atualiza um usuário existente

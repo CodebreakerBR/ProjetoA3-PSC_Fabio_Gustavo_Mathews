@@ -105,6 +105,13 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
             DatabaseUtil.closeConnection(connection);
         }
     }
+    public List<Usuario> searchByNomeOuEmail(String termo) throws SQLException {
+        String sql = "SELECT id, nome, email, ativo, criado_em, atualizado_em " +
+                "FROM usuario WHERE LOWER(nome) LIKE ? OR LOWER(email) LIKE ? ORDER BY nome";
+        String filtro = "%" + termo.toLowerCase().trim() + "%";
+        return executeQuery(sql, filtro, filtro);
+    }
+
 
     @Override
     public Usuario update(Usuario usuario) throws SQLException {

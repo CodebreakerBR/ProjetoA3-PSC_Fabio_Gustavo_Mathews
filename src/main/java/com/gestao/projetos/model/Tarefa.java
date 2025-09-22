@@ -4,15 +4,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/**
- * Classe que representa uma tarefa no sistema
- */
 public class Tarefa {
     private Long id;
     private String titulo;
     private String descricao;
     private StatusTarefa status;
     private int prioridade; // 1-5 (1=Baixa, 5=Crítica)
+    private Double estimativaHoras;
+    private Double horasTrabalhadas;
     private LocalDate dataInicioPrevista;
     private LocalDate dataFimPrevista;
     private LocalDate dataInicioReal;
@@ -24,7 +23,6 @@ public class Tarefa {
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
 
-    // Construtores
     public Tarefa() {
         this.status = StatusTarefa.NOVA;
         this.prioridade = 3; // Prioridade média
@@ -40,7 +38,6 @@ public class Tarefa {
         this.projetoId = projeto != null ? projeto.getId() : null;
     }
 
-    // Getters e Setters
     public Long getId() {
         return id;
     }
@@ -86,6 +83,24 @@ public class Tarefa {
         }
         this.prioridade = prioridade;
         this.atualizadoEm = LocalDateTime.now();
+    }
+
+    public Double getEstimativaHoras() {
+        return estimativaHoras;
+    }
+
+    public void setEstimativaHoras(Double estimativaHoras) {
+        this.estimativaHoras = estimativaHoras;
+        this.atualizadoEm = LocalDateTime.now(); // <-- ADICIONADO
+    }
+
+    public Double getHorasTrabalhadas() {
+        return horasTrabalhadas;
+    }
+
+    public void setHorasTrabalhadas(Double horasTrabalhadas) {
+        this.horasTrabalhadas = horasTrabalhadas;
+        this.atualizadoEm = LocalDateTime.now(); // <-- ADICIONADO
     }
 
     public LocalDate getDataInicioPrevista() {
@@ -178,7 +193,6 @@ public class Tarefa {
         this.atualizadoEm = atualizadoEm;
     }
 
-    // Métodos auxiliares
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -197,18 +211,17 @@ public class Tarefa {
         return titulo + " (" + status.getDescricao() + ")";
     }
 
-    // Validações e métodos de negócio
     public boolean isValid() {
         return titulo != null && !titulo.trim().isEmpty() &&
-               projetoId != null &&
-               prioridade >= 1 && prioridade <= 5 &&
-               (dataFimPrevista == null || dataInicioPrevista == null || 
-                !dataFimPrevista.isBefore(dataInicioPrevista));
+                projetoId != null &&
+                prioridade >= 1 && prioridade <= 5 &&
+                (dataFimPrevista == null || dataInicioPrevista == null ||
+                        !dataFimPrevista.isBefore(dataInicioPrevista));
     }
 
     public boolean isAtrasada() {
-        if (dataFimPrevista == null || status == StatusTarefa.CONCLUIDA || 
-            status == StatusTarefa.CANCELADA) {
+        if (dataFimPrevista == null || status == StatusTarefa.CONCLUIDA ||
+                status == StatusTarefa.CANCELADA) {
             return false;
         }
         return LocalDate.now().isAfter(dataFimPrevista);

@@ -3,45 +3,28 @@ package com.gestao.projetos.model;
 /**
  * Enum que representa os diferentes tipos de status de um projeto
  */
-public enum StatusProjeto {
-    PLANEJADO("PLANEJADO", "Projeto em fase de planejamento"),
-    EM_ANDAMENTO("EM_ANDAMENTO", "Projeto em execução"),
-    PAUSADO("PAUSADO", "Projeto temporariamente pausado"),
-    CANCELADO("CANCELADO", "Projeto cancelado"),
-    CONCLUIDO("CONCLUIDO", "Projeto finalizado com sucesso");
 
-    private final String codigo;
-    private final String descricao;
+    public enum StatusProjeto {
+        PLANEJADO("PLANEJADO", "Projeto em fase de planejamento"),
+        EM_ANDAMENTO("EM_ANDAMENTO", "Projeto em execução"),
+        PAUSADO("PAUSADO", "Projeto temporariamente pausado"),
+        CANCELADO("CANCELADO", "Projeto cancelado"),
+        CONCLUIDO("CONCLUIDO", "Projeto finalizado com sucesso");
 
-    StatusProjeto(String codigo, String descricao) {
-        this.codigo = codigo;
-        this.descricao = descricao;
-    }
+        private final String codigo;
+        private final String descricao;
 
-    public String getCodigo() {
-        return codigo;
-    }
-
-    public String getDescricao() {
-        return descricao;
-    }
-
-    public enum StatusProjeto2 {
-        EM_ANDAMENTO("EM"),
-        CONCLUIDO("CO"),
-        CANCELADO("CA");
-
-        private String codigo;
-
-        StatusProjeto2(String em) {
-        }
-
-        void StatusProjeto(String codigo) {
+        StatusProjeto(String codigo, String descricao) {
             this.codigo = codigo;
+            this.descricao = descricao;
         }
 
         public String getCodigo() {
             return codigo;
+        }
+
+        public String getDescricao() {
+            return descricao;
         }
 
         public static StatusProjeto fromCodigo(String codigo) {
@@ -52,11 +35,9 @@ public enum StatusProjeto {
             }
             throw new IllegalArgumentException("Status de projeto inválido: " + codigo);
         }
-    }
 
-
-    @Override
-    public String toString() {
-        return descricao;
+        @Override
+        public String toString() {
+            return descricao;
+        }
     }
-}

@@ -7,6 +7,9 @@ import java.awt.event.*;
 import java.util.List;
 import com.gestao.projetos.model.Usuario;
 import com.gestao.projetos.service.UsuarioService;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
+
 
 public class ProjetoView extends JInternalFrame {
     private JPanel membrosPanel;

@@ -6,6 +6,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import com.gestao.projetos.model.Usuario;
@@ -17,6 +18,7 @@ public class SelecionarUsuarioView extends JFrame {
     private DefaultListModel<String> modeloLista;
     private List<Usuario> usuarios;
 
+
     public SelecionarUsuarioView(Consumer<String> callback) throws SQLException {
         setTitle("Selecionar Usuário");
         setSize(400, 300);
@@ -26,8 +28,15 @@ public class SelecionarUsuarioView extends JFrame {
         modeloLista = new DefaultListModel<>();
         listaUsuarios = new JList<>(modeloLista);
 
-        usuarios = new UsuarioService().listarTodos();
-        atualizarLista("");
+
+        usuarios = new ArrayList<>();
+        try {
+            usuarios = new UsuarioService().listarTodos();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Erro ao carregar usuários: " + ex.getMessage());
+        }
+
 
         txtBusca.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { atualizarLista(txtBusca.getText()); }

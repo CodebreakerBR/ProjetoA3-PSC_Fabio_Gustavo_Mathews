@@ -12,6 +12,7 @@ public class Projeto {
     private Long id;
     private String nome;
     private String descricao;
+private String equipe;
     private LocalDate dataInicio;
     private LocalDate dataTerminoPrevista;
     private String status;
@@ -56,6 +57,14 @@ public class Projeto {
 
     public void setDescricao(String descricao) {
         this.descricao = descricao;
+    }
+
+    public String getEquipe() {
+        return equipe;
+    }
+
+    public void setEquipe(String equipe) {
+        this.equipe = equipe;
     }
 
     public LocalDate getDataInicio() {

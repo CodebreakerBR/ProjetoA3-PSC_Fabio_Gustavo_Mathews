@@ -1,63 +1,44 @@
 
 package com.gestao.projetos.service;
 
-import com.gestao.projetos.dao.ProjetoDAO;
 import com.gestao.projetos.model.Projeto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.List;
-import java.util.Optional;
 
 public class ProjetoService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProjetoService.class);
-    private final ProjetoDAO projetoDAO;
+    public boolean salvarProjeto(Projeto projeto) {
+        String sqlProjeto = "INSERT INTO projetos (nome, equipe, descricao, data_inicio, data_termino, status) VALUES (?, ?, ?, ?, ?, ?)";
+        String sqlMembro = "INSERT INTO membros_projeto (projeto_id, nome_membro) VALUES (?, ?)";
 
-    public ProjetoService() {
-        this.projetoDAO = new ProjetoDAO();
-    }
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/seu_banco", "usuario", "senha");
+             PreparedStatement stmtProjeto = conn.prepareStatement(sqlProjeto, Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement stmtMembro = conn.prepareStatement(sqlMembro)) {
 
-    public ProjetoService(ProjetoDAO projetoDAO) {
-        this.projetoDAO = projetoDAO;
-    }
+            stmtProjeto.setString(1, projeto.getNome());
+            stmtProjeto.setString(2, projeto.getEquipe());
+            stmtProjeto.setString(3, projeto.getDescricao());
+            stmtProjeto.setString(4, projeto.getDataInicio());
+            stmtProjeto.setString(5, projeto.getDataTermino());
+            stmtProjeto.setString(6, projeto.getStatus());
 
-    public Projeto salvar(Projeto projeto) throws SQLException {
-        if (projeto == null || !projeto.isValid()) {
-            throw new IllegalArgumentException("Projeto inválido ou nulo");
+            int rows = stmtProjeto.executeUpdate();
+            if (rows == 0) return false;
+
+            ResultSet generatedKeys = stmtProjeto.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                int projetoId = generatedKeys.getInt(1);
+                List<String> membros = projeto.getMembros();
+                for (String membro : membros) {
+                    stmtMembro.setInt(1, projetoId);
+                    stmtMembro.setString(2, membro);
+                    stmtMembro.executeUpdate();
+                }
+            }
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
-        return projetoDAO.save(projeto);
-    }
-
-    public Projeto atualizar(Projeto projeto) throws SQLException {
-        if (projeto == null || projeto.getId() == null) {
-            throw new IllegalArgumentException("Projeto ou ID não pode ser nulo");
-        }
-        if (!projetoDAO.exists(projeto.getId())) {
-            throw new IllegalArgumentException("Projeto não encontrado: " + projeto.getId());
-        }
-        return projetoDAO.update(projeto);
-    }
-
-    public void remover(Long id) throws SQLException {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("ID inválido");
-        }
-        if (!projetoDAO.exists(id)) {
-            throw new IllegalArgumentException("Projeto não encontrado: " + id);
-        }
-        projetoDAO.delete(id);
-    }
-
-    public Optional<Projeto> buscarPorId(Long id) throws SQLException {
-        if (id == null || id <= 0) {
-            return Optional.empty();
-        }
-        return projetoDAO.findById(id);
-    }
-
-    public List<Projeto> listarTodos() throws SQLException {
-        return projetoDAO.findAll();
     }
 }

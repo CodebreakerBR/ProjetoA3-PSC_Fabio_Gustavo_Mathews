@@ -3,6 +3,7 @@ package com.gestao.projetos.dao;
 import com.gestao.projetos.model.Projeto;
 import com.gestao.projetos.model.StatusProjeto;
 import com.gestao.projetos.model.Usuario;
+import com.gestao.projetos.model.Equipe;
 import com.gestao.projetos.util.DatabaseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,37 +25,37 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
     
     // Queries SQL
     private static final String INSERT_SQL = 
-        "INSERT INTO projeto (nome, descricao, data_inicio_prevista, data_fim_prevista, " +
-        "data_inicio_real, data_fim_real, status, gerente_id, criado_em, atualizado_em) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO projeto (nome, descricao, data_inicio, data_fim_prevista, " +
+        "data_fim_real, status, gerente_id, criado_em, atualizado_em) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     private static final String UPDATE_SQL = 
-        "UPDATE projeto SET nome = ?, descricao = ?, data_inicio_prevista = ?, " +
-        "data_fim_prevista = ?, data_inicio_real = ?, data_fim_real = ?, status = ?, " +
+        "UPDATE projeto SET nome = ?, descricao = ?, data_inicio = ?, " +
+        "data_fim_prevista = ?, data_fim_real = ?, status = ?, " +
         "gerente_id = ?, atualizado_em = ? WHERE id = ?";
     
     private static final String DELETE_SQL = 
         "DELETE FROM projeto WHERE id = ?";
     
     private static final String SELECT_BY_ID_SQL = 
-        "SELECT p.id, p.nome, p.descricao, p.data_inicio_prevista, p.data_fim_prevista, " +
-        "p.data_inicio_real, p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
+        "SELECT p.id, p.nome, p.descricao, p.data_inicio, p.data_fim_prevista, " +
+        "p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
         "u.nome as gerente_nome, u.email as gerente_email, u.ativo as gerente_ativo " +
         "FROM projeto p " +
         "LEFT JOIN usuario u ON p.gerente_id = u.id " +
         "WHERE p.id = ?";
     
     private static final String SELECT_ALL_SQL = 
-        "SELECT p.id, p.nome, p.descricao, p.data_inicio_prevista, p.data_fim_prevista, " +
-        "p.data_inicio_real, p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
+        "SELECT p.id, p.nome, p.descricao, p.data_inicio, p.data_fim_prevista, " +
+        "p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
         "u.nome as gerente_nome, u.email as gerente_email, u.ativo as gerente_ativo " +
         "FROM projeto p " +
         "LEFT JOIN usuario u ON p.gerente_id = u.id " +
         "ORDER BY p.nome";
     
     private static final String SELECT_BY_GERENTE_SQL = 
-        "SELECT p.id, p.nome, p.descricao, p.data_inicio_prevista, p.data_fim_prevista, " +
-        "p.data_inicio_real, p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
+        "SELECT p.id, p.nome, p.descricao, p.data_inicio, p.data_fim_prevista, " +
+        "p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
         "u.nome as gerente_nome, u.email as gerente_email, u.ativo as gerente_ativo " +
         "FROM projeto p " +
         "LEFT JOIN usuario u ON p.gerente_id = u.id " +
@@ -62,8 +63,8 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
         "ORDER BY p.nome";
     
     private static final String SELECT_BY_STATUS_SQL = 
-        "SELECT p.id, p.nome, p.descricao, p.data_inicio_prevista, p.data_fim_prevista, " +
-        "p.data_inicio_real, p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
+        "SELECT p.id, p.nome, p.descricao, p.data_inicio, p.data_fim_prevista, " +
+        "p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
         "u.nome as gerente_nome, u.email as gerente_email, u.ativo as gerente_ativo " +
         "FROM projeto p " +
         "LEFT JOIN usuario u ON p.gerente_id = u.id " +
@@ -71,8 +72,8 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
         "ORDER BY p.nome";
     
     private static final String SELECT_ATRASADOS_SQL = 
-        "SELECT p.id, p.nome, p.descricao, p.data_inicio_prevista, p.data_fim_prevista, " +
-        "p.data_inicio_real, p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
+        "SELECT p.id, p.nome, p.descricao, p.data_inicio, p.data_fim_prevista, " +
+        "p.data_fim_real, p.status, p.gerente_id, p.criado_em, p.atualizado_em, " +
         "u.nome as gerente_nome, u.email as gerente_email, u.ativo as gerente_ativo " +
         "FROM projeto p " +
         "LEFT JOIN usuario u ON p.gerente_id = u.id " +
@@ -110,18 +111,20 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
             
             statement.setString(1, projeto.getNome());
             statement.setString(2, projeto.getDescricao());
-            statement.setDate(3, projeto.getDataInicioPrevista() != null ? 
-                Date.valueOf(projeto.getDataInicioPrevista()) : null);
+            statement.setDate(3, projeto.getDataInicio() != null ? 
+                Date.valueOf(projeto.getDataInicio()) : null);
             statement.setDate(4, projeto.getDataFimPrevista() != null ? 
                 Date.valueOf(projeto.getDataFimPrevista()) : null);
-            statement.setDate(5, projeto.getDataInicioReal() != null ? 
-                Date.valueOf(projeto.getDataInicioReal()) : null);
-            statement.setDate(6, projeto.getDataFimReal() != null ? 
+            statement.setDate(5, projeto.getDataFimReal() != null ? 
                 Date.valueOf(projeto.getDataFimReal()) : null);
-            statement.setString(7, projeto.getStatus());
-            statement.setLong(8, projeto.getGerenteId());
-            statement.setTimestamp(9, Timestamp.valueOf(projeto.getCriadoEm()));
-            statement.setTimestamp(10, Timestamp.valueOf(projeto.getAtualizadoEm()));
+            statement.setString(6, projeto.getStatus());
+            if (projeto.getGerenteId() != null) {
+                statement.setLong(7, projeto.getGerenteId());
+            } else {
+                statement.setNull(7, java.sql.Types.BIGINT);
+            }
+            statement.setTimestamp(8, Timestamp.valueOf(projeto.getCriadoEm()));
+            statement.setTimestamp(9, Timestamp.valueOf(projeto.getAtualizadoEm()));
             
             int affectedRows = statement.executeUpdate();
             if (affectedRows == 0) {
@@ -169,18 +172,20 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
 
             statement.setString(1, projeto.getNome());
             statement.setString(2, projeto.getDescricao());
-            statement.setDate(3, projeto.getDataInicioPrevista() != null ?
-                Date.valueOf(projeto.getDataInicioPrevista()) : null);
+            statement.setDate(3, projeto.getDataInicio() != null ?
+                Date.valueOf(projeto.getDataInicio()) : null);
             statement.setDate(4, projeto.getDataFimPrevista() != null ?
                 Date.valueOf(projeto.getDataFimPrevista()) : null);
-            statement.setDate(5, projeto.getDataInicioReal() != null ?
-                Date.valueOf(projeto.getDataInicioReal()) : null);
-            statement.setDate(6, projeto.getDataFimReal() != null ?
+            statement.setDate(5, projeto.getDataFimReal() != null ?
                 Date.valueOf(projeto.getDataFimReal()) : null);
-            statement.setString(7, projeto.getStatus());
-            statement.setLong(8, projeto.getGerenteId());
-            statement.setTimestamp(9, Timestamp.valueOf(projeto.getAtualizadoEm()));
-            statement.setLong(10, projeto.getId());
+            statement.setString(6, projeto.getStatus());
+            if (projeto.getGerenteId() != null) {
+                statement.setLong(7, projeto.getGerenteId());
+            } else {
+                statement.setNull(7, java.sql.Types.BIGINT);
+            }
+            statement.setTimestamp(8, Timestamp.valueOf(projeto.getAtualizadoEm()));
+            statement.setLong(9, projeto.getId());
 
             int affectedRows = statement.executeUpdate();
             if (affectedRows == 0) {
@@ -398,19 +403,14 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
         projeto.setNome(rs.getString("nome"));
         projeto.setDescricao(rs.getString("descricao"));
         
-        Date dataInicioPrevista = rs.getDate("data_inicio_prevista");
-        if (dataInicioPrevista != null) {
-            projeto.setDataInicioPrevista(dataInicioPrevista.toLocalDate());
+        Date dataInicio = rs.getDate("data_inicio");
+        if (dataInicio != null) {
+            projeto.setDataInicio(dataInicio.toLocalDate());
         }
         
         Date dataFimPrevista = rs.getDate("data_fim_prevista");
         if (dataFimPrevista != null) {
             projeto.setDataFimPrevista(dataFimPrevista.toLocalDate());
-        }
-        
-        Date dataInicioReal = rs.getDate("data_inicio_real");
-        if (dataInicioReal != null) {
-            projeto.setDataInicioReal(dataInicioReal.toLocalDate());
         }
         
         Date dataFimReal = rs.getDate("data_fim_real");
@@ -420,10 +420,13 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
         
         String status = rs.getString("status");
         if (status != null) {
-            projeto.setStatus(String.valueOf(String.valueOf(StatusProjeto.fromCodigo(status))));
+            projeto.setStatus(status);
         }
         
-        projeto.setGerenteId(rs.getLong("gerente_id"));
+        long gerenteId = rs.getLong("gerente_id");
+        if (!rs.wasNull()) {
+            projeto.setGerenteId(gerenteId);
+        }
         
         // Mapeamento do gerente se existir
         String gerenteNome = rs.getString("gerente_nome");
@@ -447,5 +450,150 @@ public class ProjetoDAO implements BaseDAO<Projeto, Long> {
         }
         
         return projeto;
+    }
+
+    /**
+     * Sobrecarga para aceitar String status
+     */
+    public List<Projeto> findByStatus(String status) throws SQLException {
+        if (status == null || status.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return executeQuery(SELECT_BY_STATUS_SQL, status.trim().toUpperCase());
+    }
+
+    /**
+     * Atribui uma equipe a um projeto
+     */
+    public void atribuirEquipe(Long projetoId, Long equipeId, String papelEquipe) throws SQLException {
+        if (projetoId == null || equipeId == null) {
+            throw new IllegalArgumentException("IDs do projeto e equipe não podem ser nulos");
+        }
+
+        String sql = "INSERT INTO projeto_equipe (projeto_id, equipe_id, papel_equipe, alocado_em) VALUES (?, ?, ?, ?)";
+        
+        Connection connection = null;
+        PreparedStatement statement = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            statement = connection.prepareStatement(sql);
+            
+            statement.setLong(1, projetoId);
+            statement.setLong(2, equipeId);
+            statement.setString(3, papelEquipe != null ? papelEquipe : "EQUIPE_PRINCIPAL");
+            statement.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
+            
+            statement.executeUpdate();
+            DatabaseUtil.commit(connection);
+            
+            logger.info("Equipe {} atribuída ao projeto {} com papel {}", equipeId, projetoId, papelEquipe);
+            
+        } catch (SQLException e) {
+            DatabaseUtil.rollback(connection);
+            logger.error("Erro ao atribuir equipe {} ao projeto {}", equipeId, projetoId, e);
+            throw e;
+        } finally {
+            if (statement != null) statement.close();
+            DatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Remove uma equipe de um projeto
+     */
+    public void removerEquipe(Long projetoId, Long equipeId) throws SQLException {
+        if (projetoId == null || equipeId == null) {
+            throw new IllegalArgumentException("IDs do projeto e equipe não podem ser nulos");
+        }
+
+        String sql = "DELETE FROM projeto_equipe WHERE projeto_id = ? AND equipe_id = ?";
+        
+        Connection connection = null;
+        PreparedStatement statement = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            statement = connection.prepareStatement(sql);
+            
+            statement.setLong(1, projetoId);
+            statement.setLong(2, equipeId);
+            
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Equipe não está atribuída ao projeto ou não foi encontrada");
+            }
+            
+            DatabaseUtil.commit(connection);
+            
+            logger.info("Equipe {} removida do projeto {}", equipeId, projetoId);
+            
+        } catch (SQLException e) {
+            DatabaseUtil.rollback(connection);
+            logger.error("Erro ao remover equipe {} do projeto {}", equipeId, projetoId, e);
+            throw e;
+        } finally {
+            if (statement != null) statement.close();
+            DatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Lista equipes atribuídas a um projeto
+     */
+    public List<Equipe> findEquipesByProjeto(Long projetoId) throws SQLException {
+        if (projetoId == null) {
+            return new ArrayList<>();
+        }
+
+        String sql = "SELECT e.id, e.nome, e.descricao, e.ativa, e.criado_em, e.atualizado_em, " +
+                    "pe.papel_equipe, pe.alocado_em " +
+                    "FROM equipe e " +
+                    "INNER JOIN projeto_equipe pe ON e.id = pe.equipe_id " +
+                    "WHERE pe.projeto_id = ? AND e.ativa = true " +
+                    "ORDER BY e.nome";
+
+        List<Equipe> equipes = new ArrayList<>();
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            statement = connection.prepareStatement(sql);
+            statement.setLong(1, projetoId);
+            
+            resultSet = statement.executeQuery();
+            
+            while (resultSet.next()) {
+                Equipe equipe = new Equipe();
+                equipe.setId(resultSet.getLong("id"));
+                equipe.setNome(resultSet.getString("nome"));
+                equipe.setDescricao(resultSet.getString("descricao"));
+                equipe.setAtiva(resultSet.getBoolean("ativa"));
+                
+                Timestamp criadoEm = resultSet.getTimestamp("criado_em");
+                if (criadoEm != null) {
+                    equipe.setCriadoEm(criadoEm.toLocalDateTime());
+                }
+                
+                Timestamp atualizadoEm = resultSet.getTimestamp("atualizado_em");
+                if (atualizadoEm != null) {
+                    equipe.setAtualizadoEm(atualizadoEm.toLocalDateTime());
+                }
+                
+                equipes.add(equipe);
+            }
+            
+            return equipes;
+            
+        } catch (SQLException e) {
+            logger.error("Erro ao listar equipes do projeto {}", projetoId, e);
+            throw e;
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (statement != null) statement.close();
+            DatabaseUtil.closeConnection(connection);
+        }
     }
 }

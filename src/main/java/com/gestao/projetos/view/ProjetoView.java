@@ -120,7 +120,7 @@ btnSalvar.addActionListener(e -> {
 
     Projeto projeto = new Projeto();
     projeto.setNome(nomeProjeto);
-    projeto.setEquipe(equipe);
+                // projeto.setEquipe(equipe); // Comentado - campo removido do modelo
     projeto.setDescricao(descricao);
     
     // Converter String para LocalDate
@@ -129,7 +129,7 @@ btnSalvar.addActionListener(e -> {
             projeto.setDataInicio(LocalDate.parse(dataInicio));
         }
         if (dataTermino != null && !dataTermino.trim().isEmpty()) {
-            projeto.setDataTerminoPrevista(LocalDate.parse(dataTermino));
+            projeto.setDataFimPrevista(LocalDate.parse(dataTermino));
         }
     } catch (Exception ex) {
         JOptionPane.showMessageDialog(this, "Formato de data inválido. Use yyyy-MM-dd", "Erro", JOptionPane.ERROR_MESSAGE);

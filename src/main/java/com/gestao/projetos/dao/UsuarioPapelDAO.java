@@ -310,6 +310,46 @@ public class UsuarioPapelDAO implements BaseDAO<UsuarioPapel, Long> {
     }
     
     /**
+     * Busca os papéis de um usuário
+     */
+    public List<String> findPapeisUsuario(Long usuarioId) throws SQLException {
+        if (usuarioId == null || usuarioId <= 0) {
+            throw new IllegalArgumentException("ID do usuário inválido");
+        }
+
+        List<String> papeis = new ArrayList<>();
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            String sql = "SELECT p.nome FROM usuario_papel up " +
+                        "INNER JOIN papel p ON up.papel_id = p.id " +
+                        "WHERE up.usuario_id = ? AND up.ativo = TRUE";
+            
+            statement = connection.prepareStatement(sql);
+            statement.setLong(1, usuarioId);
+            resultSet = statement.executeQuery();
+            
+            while (resultSet.next()) {
+                papeis.add(resultSet.getString("nome"));
+            }
+            
+            logger.debug("Encontrados {} papéis para o usuário: {}", papeis.size(), usuarioId);
+            return papeis;
+            
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar papéis do usuário: {}", usuarioId, e);
+            throw e;
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (statement != null) statement.close();
+            if (connection != null) connection.close();
+        }
+    }
+
+    /**
      * Desativa todos os papéis de um usuário
      */
     public void deactivateUserRoles(Long usuarioId) throws SQLException {

@@ -4,6 +4,7 @@ package com.gestao.projetos.model;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import com.gestao.projetos.model.Usuario;
 
 public class Projeto {
@@ -12,26 +13,31 @@ public class Projeto {
     private Long id;
     private String nome;
     private String descricao;
-private String equipe;
-    private LocalDate dataInicio;
-    private LocalDate dataTerminoPrevista;
     private String status;
     private String responsavel;
 
-    // Atributos adicionais
-    private LocalDate dataInicioPrevista;
-    private LocalDate dataFimPrevista;
-    private LocalDate dataInicioReal;
-    private LocalDate dataFimReal;
+    // Datas do projeto (alinhadas ao schema do banco)
+    private LocalDate dataInicio;           // data_inicio
+    private LocalDate dataFimPrevista;      // data_fim_prevista  
+    private LocalDate dataFimReal;          // data_fim_real
+    
+    // Gerenciamento
     private Long gerenteId;
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
 
     // Membros vinculados ao projeto
     private List<Usuario> membros;
+    
+    // Equipes vinculadas ao projeto
+    private List<Equipe> equipes;
 
     // Construtor vazio
     public Projeto() {
+        this.membros = new ArrayList<>();
+        this.equipes = new ArrayList<>();
+        this.criadoEm = LocalDateTime.now();
+        this.atualizadoEm = LocalDateTime.now();
     }
 
     // Getters e Setters
@@ -59,12 +65,13 @@ private String equipe;
         this.descricao = descricao;
     }
 
-    public String getEquipe() {
-        return equipe;
+    public List<Equipe> getEquipes() {
+        return equipes;
     }
 
-    public void setEquipe(String equipe) {
-        this.equipe = equipe;
+    public void setEquipes(List<Equipe> equipes) {
+        this.equipes = equipes != null ? equipes : new ArrayList<>();
+        this.atualizadoEm = LocalDateTime.now();
     }
 
     public LocalDate getDataInicio() {
@@ -73,14 +80,16 @@ private String equipe;
 
     public void setDataInicio(LocalDate dataInicio) {
         this.dataInicio = dataInicio;
+        this.atualizadoEm = LocalDateTime.now();
     }
 
-    public LocalDate getDataTerminoPrevista() {
-        return dataTerminoPrevista;
+    public LocalDate getDataFimPrevista() {
+        return dataFimPrevista;
     }
 
-    public void setDataTerminoPrevista(LocalDate dataTerminoPrevista) {
-        this.dataTerminoPrevista = dataTerminoPrevista;
+    public void setDataFimPrevista(LocalDate dataFimPrevista) {
+        this.dataFimPrevista = dataFimPrevista;
+        this.atualizadoEm = LocalDateTime.now();
     }
 
     public String getStatus() {
@@ -99,36 +108,13 @@ private String equipe;
         this.responsavel = responsavel;
     }
 
-    public LocalDate getDataInicioPrevista() {
-        return dataInicioPrevista;
-    }
-
-    public void setDataInicioPrevista(LocalDate dataInicioPrevista) {
-        this.dataInicioPrevista = dataInicioPrevista;
-    }
-
-    public LocalDate getDataFimPrevista() {
-        return dataFimPrevista;
-    }
-
-    public void setDataFimPrevista(LocalDate dataFimPrevista) {
-        this.dataFimPrevista = dataFimPrevista;
-    }
-
-    public LocalDate getDataInicioReal() {
-        return dataInicioReal;
-    }
-
-    public void setDataInicioReal(LocalDate dataInicioReal) {
-        this.dataInicioReal = dataInicioReal;
-    }
-
     public LocalDate getDataFimReal() {
         return dataFimReal;
     }
 
     public void setDataFimReal(LocalDate dataFimReal) {
         this.dataFimReal = dataFimReal;
+        this.atualizadoEm = LocalDateTime.now();
     }
 
     public Long getGerenteId() {
@@ -160,13 +146,94 @@ private String equipe;
     }
 
     public void setMembros(List<Usuario> membros) {
-        this.membros = membros;
+        this.membros = membros != null ? membros : new ArrayList<>();
+        this.atualizadoEm = LocalDateTime.now();
+    }
+
+    // Métodos auxiliares para gerenciar equipes
+    public void adicionarEquipe(Equipe equipe) {
+        if (equipe != null && !this.equipes.contains(equipe)) {
+            this.equipes.add(equipe);
+            this.atualizadoEm = LocalDateTime.now();
+        }
+    }
+
+    public void removerEquipe(Equipe equipe) {
+        if (equipe != null) {
+            this.equipes.remove(equipe);
+            this.atualizadoEm = LocalDateTime.now();
+        }
+    }
+
+    public boolean temEquipe(Equipe equipe) {
+        return equipe != null && this.equipes.contains(equipe);
+    }
+
+    // Métodos auxiliares para gerenciar membros
+    public void adicionarMembro(Usuario membro) {
+        if (membro != null && !this.membros.contains(membro)) {
+            this.membros.add(membro);
+            this.atualizadoEm = LocalDateTime.now();
+        }
+    }
+
+    public void removerMembro(Usuario membro) {
+        if (membro != null) {
+            this.membros.remove(membro);
+            this.atualizadoEm = LocalDateTime.now();
+        }
+    }
+
+    public boolean temMembro(Usuario membro) {
+        return membro != null && this.membros.contains(membro);
     }
 
     // Método de validação simples
     public boolean isValid() {
         return nome != null && !nome.isEmpty()
-            && dataInicio != null
-            && dataTerminoPrevista != null;
+            && status != null && !status.isEmpty();
+    }
+
+    // Método para verificar se o projeto está atrasado
+    public boolean isAtrasado() {
+        if (dataFimPrevista == null) {
+            return false;
+        }
+        
+        LocalDate hoje = LocalDate.now();
+        return hoje.isAfter(dataFimPrevista) && 
+               !"CONCLUIDO".equals(status) && 
+               !"CANCELADO".equals(status);
+    }
+
+    // Método para calcular o progresso (pode ser implementado futuramente)
+    public double calcularProgresso() {
+        // Por enquanto retorna 0, mas pode ser implementado com base nas tarefas
+        return 0.0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        
+        Projeto projeto = (Projeto) obj;
+        return id != null && id.equals(projeto.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return "Projeto{" +
+                "id=" + id +
+                ", nome='" + nome + '\'' +
+                ", status='" + status + '\'' +
+                ", equipes=" + (equipes != null ? equipes.size() : 0) +
+                ", membros=" + (membros != null ? membros.size() : 0) +
+                '}';
     }
 }

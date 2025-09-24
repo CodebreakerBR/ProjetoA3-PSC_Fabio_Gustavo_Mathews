@@ -7,7 +7,7 @@ import com.gestao.projetos.util.AccessValidator;
 import com.gestao.projetos.service.AuthorizationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.gestao.projetos.view.ProjetoView;
+import com.gestao.projetos.view.ProjetoFrame;
 
 import javax.swing.*;
 
@@ -72,7 +72,11 @@ public class MainController {
                     // Verifica se já existe uma janela aberta
                     JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
                     for (JInternalFrame frame : frames) {
-                        if (frame instanceof ProjetoView) {
+                        if (frame instanceof ProjetoFrame) {
+                            // Se a janela está oculta, torná-la visível novamente
+                            if (!frame.isVisible()) {
+                                frame.setVisible(true);
+                            }
                             frame.toFront();
                             frame.setSelected(true);
                             return;
@@ -80,9 +84,9 @@ public class MainController {
                     }
 
                     // Cria nova janela
-                    ProjetoView projetoView = new ProjetoView();
-                    mainFrame.addInternalFrame(projetoView);
-                    projetoView.setVisible(true);
+                    ProjetoFrame projetoFrame = new ProjetoFrame();
+                    mainFrame.addInternalFrame(projetoFrame);
+                    projetoFrame.setVisible(true);
                     mainFrame.updateStatusMessage("Gestão de Projetos aberta");
 
                 } catch (Exception e) {
@@ -105,22 +109,26 @@ public class MainController {
      */
     public void abrirGestaoEquipes() {
         AccessValidator.executeWithAccess(
-            AuthorizationService.RECURSO_PROJETOS, 
+            AuthorizationService.RECURSO_EQUIPES, 
             mainFrame, 
             () -> {
                 try {
                     JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
                     for (JInternalFrame frame : frames) {
-                        if (frame instanceof EquipeView) {
+                        if (frame instanceof EquipeFrame) {
+                            // Se a janela está oculta, torná-la visível novamente
+                            if (!frame.isVisible()) {
+                                frame.setVisible(true);
+                            }
                             frame.toFront();
                             frame.setSelected(true);
                             return;
                         }
                     }
 
-                    EquipeView equipeView = new EquipeView();
-                    mainFrame.addInternalFrame(equipeView);
-                    equipeView.setVisible(true);
+                    EquipeFrame equipeFrame = new EquipeFrame();
+                    mainFrame.addInternalFrame(equipeFrame);
+                    equipeFrame.setVisible(true);
                     mainFrame.updateStatusMessage("Gestão de Equipes aberta");
 
                 } catch (Exception e) {

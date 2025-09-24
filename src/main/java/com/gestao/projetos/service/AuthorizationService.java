@@ -29,6 +29,7 @@ public class AuthorizationService {
     public static final String RECURSO_USUARIOS = "usuarios";
     public static final String RECURSO_PROJETOS = "projetos";
     public static final String RECURSO_TAREFAS = "tarefas";
+    public static final String RECURSO_EQUIPES = "equipes";
     public static final String RECURSO_DASHBOARD = "dashboard";
     public static final String RECURSO_RELATORIOS = "relatorios";
     
@@ -78,6 +79,9 @@ public class AuthorizationService {
                     return papeisUsuario.contains(PAPEL_ADMINISTRADOR) || 
                            papeisUsuario.contains(PAPEL_GERENTE) || 
                            papeisUsuario.contains(PAPEL_COLABORADOR);
+                    
+                case RECURSO_EQUIPES:
+                    return papeisUsuario.contains(PAPEL_ADMINISTRADOR);
                     
                 case RECURSO_DASHBOARD:
                     return papeisUsuario.contains(PAPEL_ADMINISTRADOR) || 

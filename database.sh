@@ -13,6 +13,8 @@ MYSQL_DATABASE="gestao_projetos"
 MYSQL_USER="gestao_user"
 MYSQL_PASSWORD="gestao123"
 MYSQL_ROOT_PASSWORD="root123"
+MYSQL_VOLUME="gestao-mysql-data"
+MYSQL_DATA_DIR="$HOME/gestao-projetos-data"
 
 check_container() {
     docker ps --format "table {{.Names}}" | grep -q "^${MYSQL_CONTAINER}$"
@@ -35,12 +37,39 @@ check_docker() {
     return 0
 }
 
+create_mysql_volume() {
+    echo -e "${YELLOW}📁 Configurando volume persistente para MySQL...${NC}"
+    
+    # Criar diretório local para dados (método bind mount)
+    if [ ! -d "$MYSQL_DATA_DIR" ]; then
+        echo -e "${YELLOW}📂 Criando diretório para dados: $MYSQL_DATA_DIR${NC}"
+        mkdir -p "$MYSQL_DATA_DIR"
+        chmod 755 "$MYSQL_DATA_DIR"
+    fi
+    
+    # Verificar se o volume Docker existe, se não, criar
+    if ! docker volume ls | grep -q "$MYSQL_VOLUME"; then
+        echo -e "${YELLOW}📦 Criando volume Docker: $MYSQL_VOLUME${NC}"
+        docker volume create $MYSQL_VOLUME >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Volume Docker criado com sucesso${NC}"
+        else
+            echo -e "${YELLOW}⚠️ Usando bind mount como fallback${NC}"
+        fi
+    else
+        echo -e "${GREEN}✅ Volume Docker já existe${NC}"
+    fi
+}
+
 start_mysql() {
     echo -e "${YELLOW}🐳 Iniciando MySQL via Docker...${NC}"
 
     if ! check_docker; then
         return 1
     fi
+
+    # Criar volume antes de inicializar o container
+    create_mysql_volume
 
     if docker ps -a --format "table {{.Names}}" | grep -q "^${MYSQL_CONTAINER}$"; then
         if ! check_container; then
@@ -56,11 +85,21 @@ start_mysql() {
             docker pull mysql:8.0
         fi
 
-        echo -e "${YELLOW}🚀 Criando container MySQL...${NC}"
+        echo -e "${YELLOW}🚀 Criando container MySQL com volume persistente...${NC}"
+
+        # Tentar usar volume Docker primeiro, fallback para bind mount
+        if docker volume ls | grep -q "$MYSQL_VOLUME"; then
+            VOLUME_OPTION="-v ${MYSQL_VOLUME}:/var/lib/mysql"
+            echo -e "${BLUE}📦 Usando volume Docker: $MYSQL_VOLUME${NC}"
+        else
+            VOLUME_OPTION="-v ${MYSQL_DATA_DIR}:/var/lib/mysql"
+            echo -e "${BLUE}📁 Usando bind mount: $MYSQL_DATA_DIR${NC}"
+        fi
 
         docker run -d \
             --name ${MYSQL_CONTAINER} \
             --network=host \
+            $VOLUME_OPTION \
             -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
             -e MYSQL_DATABASE=${MYSQL_DATABASE} \
             -e MYSQL_USER=${MYSQL_USER} \
@@ -73,7 +112,8 @@ start_mysql() {
             --bind-address=0.0.0.0
 
         if [ $? -eq 0 ]; then
-            echo -e "${GREEN}✅ Container MySQL criado${NC}"
+            echo -e "${GREEN}✅ Container MySQL criado com volume persistente${NC}"
+            echo -e "${BLUE}💾 Dados serão salvos em: ${MYSQL_DATA_DIR}${NC}"
             return 0
         else
             echo -e "${RED}❌ Erro ao criar container MySQL${NC}"
@@ -191,11 +231,29 @@ stop_mysql() {
     echo -e "${YELLOW}🛑 Parando MySQL...${NC}"
     if check_container; then
         docker stop ${MYSQL_CONTAINER} >/dev/null 2>&1
-        docker rm ${MYSQL_CONTAINER} >/dev/null 2>&1
-        echo -e "${GREEN}✅ MySQL parado${NC}"
+        echo -e "${GREEN}✅ MySQL parado (container mantido para preservar dados)${NC}"
+        echo -e "${BLUE}💡 Para remover completamente: $0 remove${NC}"
     else
         echo -e "${YELLOW}⚠️ MySQL não estava rodando${NC}"
     fi
+}
+
+remove_mysql() {
+    echo -e "${YELLOW}🗑️ Removendo container MySQL...${NC}"
+    
+    # Parar o container se estiver rodando
+    if check_container; then
+        docker stop ${MYSQL_CONTAINER} >/dev/null 2>&1
+    fi
+    
+    # Remover o container
+    if docker ps -a --format "table {{.Names}}" | grep -q "^${MYSQL_CONTAINER}$"; then
+        docker rm ${MYSQL_CONTAINER} >/dev/null 2>&1
+        echo -e "${GREEN}✅ Container MySQL removido${NC}"
+    fi
+    
+    echo -e "${BLUE}💾 Dados preservados em: $MYSQL_DATA_DIR${NC}"
+    echo -e "${YELLOW}⚠️ Para remover os dados permanentemente: rm -rf $MYSQL_DATA_DIR${NC}"
 }
 
 status_mysql() {
@@ -203,8 +261,29 @@ status_mysql() {
         echo -e "${GREEN}✅ MySQL está rodando (container: ${MYSQL_CONTAINER})${NC}"
         echo -e "${BLUE}📊 Informações do container:${NC}"
         docker ps --filter "name=${MYSQL_CONTAINER}" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+        
+        echo -e "${BLUE}💾 Informações de armazenamento:${NC}"
+        if docker volume ls | grep -q "$MYSQL_VOLUME"; then
+            echo -e "  Volume Docker: $MYSQL_VOLUME"
+            docker volume inspect $MYSQL_VOLUME --format "  Localização: {{.Mountpoint}}" 2>/dev/null
+        fi
+        echo -e "  Diretório local: $MYSQL_DATA_DIR"
+        if [ -d "$MYSQL_DATA_DIR" ]; then
+            echo -e "  Tamanho dos dados: $(du -sh "$MYSQL_DATA_DIR" 2>/dev/null | cut -f1)"
+        fi
+        
+        echo -e "${BLUE}🗄️ Informações do banco:${NC}"
+        TABLES=$(docker exec ${MYSQL_CONTAINER} mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${MYSQL_DATABASE}';" -s -N 2>/dev/null || echo "0")
+        echo -e "  Tabelas: $TABLES"
+        
     else
         echo -e "${RED}❌ MySQL não está rodando${NC}"
+        
+        # Mostrar informações mesmo com container parado
+        if [ -d "$MYSQL_DATA_DIR" ]; then
+            echo -e "${BLUE}💾 Dados preservados em: $MYSQL_DATA_DIR${NC}"
+            echo -e "  Tamanho: $(du -sh "$MYSQL_DATA_DIR" 2>/dev/null | cut -f1)"
+        fi
     fi
 }
 
@@ -250,6 +329,9 @@ if [ "${BASH_SOURCE[0]}" == "${0}" ]; then
         "stop")
             stop_mysql
             ;;
+        "remove")
+            remove_mysql
+            ;;
         "status")
             status_mysql
             ;;
@@ -263,15 +345,21 @@ if [ "${BASH_SOURCE[0]}" == "${0}" ]; then
             setup_complete_database
             ;;
         *)
-            echo -e "${BLUE}Uso: $0 {start|stop|status|logs|connect|setup}${NC}"
+            echo -e "${BLUE}Uso: $0 {start|stop|remove|status|logs|connect|setup}${NC}"
             echo ""
             echo -e "${YELLOW}Comandos disponíveis:${NC}"
-            echo -e "  start   - Iniciar MySQL"
-            echo -e "  stop    - Parar MySQL"
-            echo -e "  status  - Ver status do MySQL"
-            echo -e "  logs    - Ver logs do MySQL"
-            echo -e "  connect - Conectar ao MySQL"
-            echo -e "  setup   - Configuração completa (padrão)"
+            echo -e "  start    - Iniciar MySQL com volume persistente"
+            echo -e "  stop     - Parar MySQL (preserva dados)"
+            echo -e "  remove   - Remover container (preserva dados)"
+            echo -e "  status   - Ver status e informações de armazenamento"
+            echo -e "  logs     - Ver logs do MySQL"
+            echo -e "  connect  - Conectar ao MySQL"
+            echo -e "  setup    - Configuração completa (padrão)"
+            echo ""
+            echo -e "${BLUE}💾 Persistência de dados:${NC}"
+            echo -e "  Os dados são salvos em: $MYSQL_DATA_DIR"
+            echo -e "  Volume Docker: $MYSQL_VOLUME"
+            echo -e "  Os dados persistem mesmo após remover o container"
             ;;
     esac
 fi

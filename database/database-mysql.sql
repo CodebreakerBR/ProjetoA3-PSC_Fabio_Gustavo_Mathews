@@ -12,7 +12,26 @@ USE gestao_projetos;
 
 -- =====================================================
 -- TABELAS DE DOMÍNIO (ENUMS)
--- =====================================================
+-- Permissões específicas do sistema
+INSERT INTO permissao (chave, descricao) VALUES
+    ('usuarios.criar', 'Criar usuários'),
+    ('usuarios.editar', 'Editar usuários'),
+    ('usuarios.excluir', 'Excluir usuários'),
+    ('usuarios.visualizar', 'Visualizar usuários'),
+    ('projetos.criar', 'Criar projetos'),
+    ('projetos.editar', 'Editar projetos'),
+    ('projetos.excluir', 'Excluir projetos'),
+    ('projetos.visualizar', 'Visualizar projetos'),
+    ('tarefas.criar', 'Criar tarefas'),
+    ('tarefas.editar', 'Editar tarefas'),
+    ('tarefas.excluir', 'Excluir tarefas'),
+    ('tarefas.visualizar', 'Visualizar tarefas'),
+    ('equipes.criar', 'Criar equipes'),
+    ('equipes.editar', 'Editar equipes'),
+    ('equipes.excluir', 'Excluir equipes'),
+    ('equipes.visualizar', 'Visualizar equipes'),
+    ('relatorios.visualizar', 'Visualizar relatórios'),
+    ('dashboard.visualizar', 'Visualizar dashboard');========================================
 
 CREATE TABLE status_projeto (
     codigo VARCHAR(20) PRIMARY KEY,
@@ -158,23 +177,64 @@ CREATE TABLE projeto (
     INDEX idx_projeto_nome (nome)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Equipes de projetos
+-- Equipes independentes
 CREATE TABLE equipe (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    papel_equipe VARCHAR(100), 
-    projeto_id BIGINT NOT NULL,
-    usuario_id BIGINT NOT NULL,
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT,
+    ativa BOOLEAN DEFAULT TRUE,
+    gerente_id BIGINT,
     
     -- Auditoria
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (projeto_id) REFERENCES projeto(id) ON DELETE CASCADE,
+    FOREIGN KEY (gerente_id) REFERENCES usuario(id) ON DELETE SET NULL,
+    
+    UNIQUE KEY uk_equipe_nome (nome),
+    INDEX idx_equipe_gerente (gerente_id),
+    INDEX idx_equipe_ativa (ativa)
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Membros das equipes (N:N Usuario-Equipe)
+CREATE TABLE equipe_membro (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    equipe_id BIGINT NOT NULL,
+    usuario_id BIGINT NOT NULL,
+    papel_equipe VARCHAR(20) DEFAULT 'COLABORADOR', -- GERENTE ou COLABORADOR
+    data_entrada DATE DEFAULT (CURRENT_DATE),
+    ativo BOOLEAN DEFAULT TRUE,
+    
+    -- Auditoria
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (equipe_id) REFERENCES equipe(id) ON DELETE CASCADE,
     FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE CASCADE,
     
-    UNIQUE KEY uk_equipe_projeto_usuario (projeto_id, usuario_id),
-    INDEX idx_equipe_projeto (projeto_id),
-    INDEX idx_equipe_usuario (usuario_id)
+    UNIQUE KEY uk_equipe_membro_ativo (equipe_id, usuario_id, ativo),
+    INDEX idx_equipe_membro_equipe (equipe_id),
+    INDEX idx_equipe_membro_usuario (usuario_id),
+    INDEX idx_equipe_membro_papel (papel_equipe),
+    
+    -- Apenas um gerente por equipe
+    CONSTRAINT ck_papel_equipe CHECK (papel_equipe IN ('GERENTE', 'COLABORADOR'))
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Alocação de equipes em projetos (mantendo compatibilidade)
+CREATE TABLE projeto_equipe (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    projeto_id BIGINT NOT NULL,
+    equipe_id BIGINT NOT NULL,
+    papel_projeto VARCHAR(100) DEFAULT 'EQUIPE_EXECUTORA', -- Papel da equipe no projeto
+    alocado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (projeto_id) REFERENCES projeto(id) ON DELETE CASCADE,
+    FOREIGN KEY (equipe_id) REFERENCES equipe(id) ON DELETE CASCADE,
+    
+    UNIQUE KEY uk_projeto_equipe (projeto_id, equipe_id),
+    INDEX idx_projeto_equipe_projeto (projeto_id),
+    INDEX idx_projeto_equipe_equipe (equipe_id)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Tarefas

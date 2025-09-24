@@ -111,6 +111,15 @@ public class MainFrame extends JFrame {
             menuCadastros.add(itemUsuarios);
         }
         
+        // Equipes - apenas ADMINISTRADOR
+        if (authService.podeAcessar(AuthorizationService.RECURSO_EQUIPES)) {
+            JMenuItem itemEquipes = new JMenuItem("Equipes");
+            itemEquipes.setMnemonic('E');
+            itemEquipes.setAccelerator(KeyStroke.getKeyStroke("ctrl E"));
+            itemEquipes.addActionListener(e -> controller.abrirGestaoEquipes());
+            menuCadastros.add(itemEquipes);
+        }
+        
         // Projetos - ADMINISTRADOR e GERENTE
         if (authService.podeAcessar(AuthorizationService.RECURSO_PROJETOS)) {
             JMenuItem itemProjetos = new JMenuItem("Projetos");
@@ -118,12 +127,6 @@ public class MainFrame extends JFrame {
             itemProjetos.setAccelerator(KeyStroke.getKeyStroke("ctrl P"));
             itemProjetos.addActionListener(e -> controller.abrirGestaoProjetos());
             menuCadastros.add(itemProjetos);
-            
-            JMenuItem itemEquipes = new JMenuItem("Equipes");
-            itemEquipes.setMnemonic('E');
-            itemEquipes.setAccelerator(KeyStroke.getKeyStroke("ctrl E"));
-            itemEquipes.addActionListener(e -> controller.abrirGestaoEquipes());
-            menuCadastros.add(itemEquipes);
         }
         
         // Tarefas - todos os papéis

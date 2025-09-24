@@ -431,7 +431,7 @@ INSERT INTO usuario (nome, email) VALUES
 
 -- Credencial para o usuário admin (hash BCrypt para 'admin123')
 INSERT INTO credencial (hash, salt, usuario_id) VALUES 
-('$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'salt123', 1);
+('$2a$10$WTbdEJbz6Wp7ofrIYwUjQ.YNG/ufAbAJqLnDMLP7mWj9D1CuZ5kPe', 'bcrypt', 1);
 
 -- =====================================================
 -- TRIGGERS (MySQL não suporta triggers PostgreSQL)

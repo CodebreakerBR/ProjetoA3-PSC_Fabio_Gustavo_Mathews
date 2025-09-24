@@ -18,8 +18,20 @@ public class ProjetoService {
             stmtProjeto.setString(1, projeto.getNome());
             stmtProjeto.setString(2, projeto.getEquipe());
             stmtProjeto.setString(3, projeto.getDescricao());
-            stmtProjeto.setString(4, projeto.getDataInicio());
-            stmtProjeto.setString(5, projeto.getDataTermino());
+            
+            // Converter LocalDate para String ou definir como NULL
+            if (projeto.getDataInicio() != null) {
+                stmtProjeto.setString(4, projeto.getDataInicio().toString());
+            } else {
+                stmtProjeto.setString(4, null);
+            }
+            
+            if (projeto.getDataTerminoPrevista() != null) {
+                stmtProjeto.setString(5, projeto.getDataTerminoPrevista().toString());
+            } else {
+                stmtProjeto.setString(5, null);
+            }
+            
             stmtProjeto.setString(6, projeto.getStatus());
 
             int rows = stmtProjeto.executeUpdate();
@@ -28,12 +40,18 @@ public class ProjetoService {
             ResultSet generatedKeys = stmtProjeto.getGeneratedKeys();
             if (generatedKeys.next()) {
                 int projetoId = generatedKeys.getInt(1);
-                List<String> membros = projeto.getMembros();
-                for (String membro : membros) {
-                    stmtMembro.setInt(1, projetoId);
-                    stmtMembro.setString(2, membro);
-                    stmtMembro.executeUpdate();
+                
+                // TODO: Implementar salvamento de membros quando List<Usuario> estiver disponível
+                /*
+                List<Usuario> membros = projeto.getMembros();
+                if (membros != null) {
+                    for (Usuario membro : membros) {
+                        stmtMembro.setInt(1, projetoId);
+                        stmtMembro.setString(2, membro.getNome()); // ou membro.getId().toString()
+                        stmtMembro.executeUpdate();
+                    }
                 }
+                */
             }
             return true;
         } catch (SQLException e) {

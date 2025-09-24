@@ -2,6 +2,7 @@ package com.gestao.projetos.controller;
 
 import com.gestao.projetos.view.*;
 import com.gestao.projetos.util.DatabaseUtil;
+import com.gestao.projetos.util.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.gestao.projetos.view.ProjetoView;
@@ -292,6 +293,46 @@ public class MainController {
         } catch (Exception e) {
             logger.error("Erro ao sair da aplicação", e);
             System.exit(1);
+        }
+    }
+
+    public void realizarLogout() {
+        try {
+            logger.info("Realizando logout do usuário");
+
+            SessionManager sessionManager = SessionManager.getInstance();
+
+            if (sessionManager.isSessionActive()) {
+                logger.info("Encerrando sessão para usuário: {}",
+                           sessionManager.getCurrentUserEmail());
+                sessionManager.endSession();
+            }
+
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    LoginFrame loginFrame = new LoginFrame();
+                    loginFrame.setVisible(true);
+
+                    if (loginFrame.isLoginSuccessful()) {
+                        MainFrame newMainFrame = new MainFrame();
+                        newMainFrame.setVisible(true);
+                    } else {
+                        logger.info("Login cancelado após logout");
+                        System.exit(0);
+                    }
+                } catch (Exception e) {
+                    logger.error("Erro ao mostrar tela de login após logout", e);
+                    System.exit(1);
+                }
+            });
+        } catch (Exception e) {
+            logger.error("Erro ao realizar logout", e);
+            JOptionPane.showMessageDialog(
+                mainFrame,
+                "Erro ao realizar logout: " + e.getMessage(),
+                "Erro",
+                JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 }

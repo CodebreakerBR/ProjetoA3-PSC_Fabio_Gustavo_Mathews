@@ -212,6 +212,12 @@ public class MainFrame extends JFrame {
         // Espaço flexível
         toolBar.add(Box.createHorizontalGlue());
         
+        // Botão de logout
+        JButton btnLogout = createToolbarButton("Logout", "logout.png", 
+            e -> {
+                performLogout();
+            });
+        
         // Status da conexão
         JButton btnConexao = createToolbarButton("Testar Conexão", "database.png", 
             e -> {
@@ -219,6 +225,7 @@ public class MainFrame extends JFrame {
                 controller.testarConexao();
             });
         
+        toolBar.add(btnLogout);
         toolBar.add(btnConexao);
     }
 
@@ -389,6 +396,32 @@ public class MainFrame extends JFrame {
             } catch (Exception e) {
                 logger.error("Erro ao fechar janela", e);
             }
+        }
+    }
+
+    /**
+     * Realiza logout do sistema
+     */
+    private void performLogout() {
+        int option = JOptionPane.showConfirmDialog(
+            this,
+            "Deseja realmente sair do sistema?",
+            "Confirmar Logout",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+        
+        if (option == JOptionPane.YES_OPTION) {
+            logger.info("Usuário solicitou logout");
+            
+            // Fechar todas as janelas internas
+            closeAllWindows();
+            
+            // Fechar a janela principal
+            this.dispose();
+            
+            // Encerrar sessão e voltar para login
+            controller.realizarLogout();
         }
     }
 

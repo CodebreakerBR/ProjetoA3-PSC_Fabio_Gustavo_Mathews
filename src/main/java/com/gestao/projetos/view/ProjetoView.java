@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.Objects;
+import java.time.LocalDate;
+import java.sql.SQLException;
 
 import java.awt.*;
 import com.gestao.projetos.model.Usuario;
@@ -84,8 +86,12 @@ public class ProjetoView extends JInternalFrame {
 
         JButton btnAddMembro = new JButton("Add Membro");
         btnAddMembro.addActionListener(e -> {
-            SelecionarUsuarioView selecionarUsuario = new SelecionarUsuarioView(nome -> adicionarMembro(nome));
-            selecionarUsuario.setVisible(true);
+            try {
+                SelecionarUsuarioView selecionarUsuario = new SelecionarUsuarioView(nome -> adicionarMembro(nome));
+                selecionarUsuario.setVisible(true);
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Erro ao carregar usuários: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
 
@@ -116,10 +122,23 @@ btnSalvar.addActionListener(e -> {
     projeto.setNome(nomeProjeto);
     projeto.setEquipe(equipe);
     projeto.setDescricao(descricao);
-    projeto.setDataInicio(dataInicio);
-    projeto.setDataTermino(dataTermino);
+    
+    // Converter String para LocalDate
+    try {
+        if (dataInicio != null && !dataInicio.trim().isEmpty()) {
+            projeto.setDataInicio(LocalDate.parse(dataInicio));
+        }
+        if (dataTermino != null && !dataTermino.trim().isEmpty()) {
+            projeto.setDataTerminoPrevista(LocalDate.parse(dataTermino));
+        }
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Formato de data inválido. Use yyyy-MM-dd", "Erro", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
+    
     projeto.setStatus(status);
-    projeto.setMembros(membros);
+    // TODO: Implementar conversão de List<String> para List<Usuario> se necessário
+    // projeto.setMembros(membros);
 
     ProjetoService service = new ProjetoService();
     boolean sucesso = service.salvarProjeto(projeto);

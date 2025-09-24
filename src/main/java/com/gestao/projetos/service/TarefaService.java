@@ -1,6 +1,7 @@
 package com.gestao.projetos.service;
 
 import com.gestao.projetos.dao.TarefaDAO;
+import com.gestao.projetos.model.StatusTarefa;
 import com.gestao.projetos.model.Tarefa;
 import com.gestao.projetos.util.ValidationUtil;
 import org.slf4j.Logger;
@@ -87,5 +88,57 @@ public class TarefaService {
                 .filter(t -> t.getTitulo().toLowerCase().contains(termoBusca) ||
                         (t.getDescricao() != null && t.getDescricao().toLowerCase().contains(termoBusca)))
                 .collect(Collectors.toList());
+    }
+
+    public List<Tarefa> listarPorProjeto(Long projetoId) throws SQLException {
+        if (projetoId == null || projetoId <= 0) {
+            throw new IllegalArgumentException("ID do projeto é obrigatório e deve ser maior que zero.");
+        }
+        logger.info("Listando tarefas do projeto ID: {}", projetoId);
+        return tarefaDAO.findByProjectoId(projetoId);
+    }
+
+    public List<Tarefa> listarPorEquipe(Long equipeId) throws SQLException {
+        if (equipeId == null || equipeId <= 0) {
+            throw new IllegalArgumentException("ID da equipe é obrigatório e deve ser maior que zero.");
+        }
+        logger.info("Listando tarefas da equipe ID: {}", equipeId);
+        return tarefaDAO.findByEquipeId(equipeId);
+    }
+
+    public List<Tarefa> listarPorStatus(StatusTarefa status) throws SQLException {
+        if (status == null) {
+            throw new IllegalArgumentException("Status é obrigatório.");
+        }
+        logger.info("Listando tarefas com status: {}", status);
+        return tarefaDAO.findByStatus(status);
+    }
+
+    public List<Tarefa> listarPorResponsavel(Long responsavelId) throws SQLException {
+        if (responsavelId == null || responsavelId <= 0) {
+            throw new IllegalArgumentException("ID do responsável é obrigatório e deve ser maior que zero.");
+        }
+        logger.info("Listando tarefas do responsável ID: {}", responsavelId);
+        return tarefaDAO.findByResponsavelId(responsavelId);
+    }
+
+    public List<Tarefa> listarTarefasAtrasadas() throws SQLException {
+        logger.info("Listando tarefas atrasadas");
+        return tarefaDAO.findTarefasAtrasadas();
+    }
+
+    public boolean existeResponsavelAssociado(Long responsavelId) throws SQLException {
+        List<Tarefa> tarefas = listarPorResponsavel(responsavelId);
+        return !tarefas.isEmpty();
+    }
+
+    public boolean existeProjetoAssociado(Long projetoId) throws SQLException {
+        List<Tarefa> tarefas = listarPorProjeto(projetoId);
+        return !tarefas.isEmpty();
+    }
+
+    public boolean existeEquipeAssociada(Long equipeId) throws SQLException {
+        List<Tarefa> tarefas = listarPorEquipe(equipeId);
+        return !tarefas.isEmpty();
     }
 }

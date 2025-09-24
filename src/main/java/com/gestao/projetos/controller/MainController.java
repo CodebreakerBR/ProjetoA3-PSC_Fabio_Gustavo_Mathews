@@ -154,16 +154,18 @@ public class MainController {
             mainFrame, 
             () -> {
                 try {
-                    // Implementação futura
-                    JOptionPane.showMessageDialog(
-                        mainFrame,
-                        "Gestão de Tarefas será implementada em breve",
-                        "Em Desenvolvimento",
-                        JOptionPane.INFORMATION_MESSAGE
-                    );
+                    TarefaFrame tarefaFrame = new TarefaFrame();
+                    mainFrame.addInternalFrame(tarefaFrame);
+                    tarefaFrame.setVisible(true);
                     
                 } catch (Exception e) {
                     logger.error("Erro ao abrir gestão de tarefas", e);
+                    JOptionPane.showMessageDialog(
+                        mainFrame,
+                        "Erro ao abrir gestão de tarefas: " + e.getMessage(),
+                        "Erro",
+                        JOptionPane.ERROR_MESSAGE
+                    );
                 }
             }
         );

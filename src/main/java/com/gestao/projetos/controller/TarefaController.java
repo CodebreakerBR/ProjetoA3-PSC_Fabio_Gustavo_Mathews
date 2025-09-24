@@ -4,6 +4,7 @@ import com.gestao.projetos.model.StatusTarefa;
 import com.gestao.projetos.model.Tarefa;
 import com.gestao.projetos.service.TarefaService;
 import com.gestao.projetos.view.TarefaFrame;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,43 +16,44 @@ import java.util.Optional;
 public class TarefaController {
 
     private static final Logger logger = LoggerFactory.getLogger(TarefaController.class);
-    private final TarefaFrame view;
+    private TarefaFrame tarefaFrame;
     private final TarefaService tarefaService;
 
     public TarefaController(TarefaFrame view) {
-        this.view = view;
+        this.tarefaFrame = view;
         this.tarefaService = new TarefaService();
     }
 
     public void carregarTarefas() {
         try {
             List<Tarefa> tarefas = tarefaService.listarTodas();
-            view.atualizarTabela(tarefas);
+            atualizarView(tarefas);
             logger.debug("Carregadas {} tarefas", tarefas.size());
         } catch (SQLException e) {
             logger.error("Erro ao carregar tarefas", e);
-            view.showError("Erro ao carregar tarefas: " + e.getMessage());
+            showError("Erro ao carregar tarefas: " + e.getMessage());
         }
     }
 
-    public void pesquisarTarefas(String termo) {
+    public void pesquisarTarefasOld(String termo) {
         try {
             List<Tarefa> tarefas = tarefaService.pesquisar(termo);
-            view.atualizarTabela(tarefas);
+            atualizarView(tarefas);
             logger.debug("Encontradas {} tarefas para o termo '{}'", tarefas.size(), termo);
         } catch (SQLException e) {
             logger.error("Erro ao pesquisar tarefas", e);
-            view.showError("Erro ao pesquisar tarefas: " + e.getMessage());
+            showError("Erro ao pesquisar tarefas: " + e.getMessage());
         }
     }
 
     public void selecionarTarefa(Long id) {
         try {
             Optional<Tarefa> tarefaOpt = tarefaService.buscarPorId(id);
-            view.selecionarTarefa(tarefaOpt.orElse(null));
+            // A nova TarefaFrame gerencia sua própria seleção
+            carregarTarefas();
         } catch (SQLException e) {
             logger.error("Erro ao selecionar tarefa", e);
-            view.showError("Erro ao selecionar tarefa: " + e.getMessage());
+            showError("Erro ao selecionar tarefa: " + e.getMessage());
         }
     }
 
@@ -77,39 +79,104 @@ public class TarefaController {
 
             if (tarefa.getId() == null) {
                 tarefaService.salvar(tarefa);
-                view.showSuccess("Tarefa criada com sucesso!");
+                showSuccess("Tarefa criada com sucesso!");
             } else {
                 tarefaService.atualizar(tarefa);
-                view.showSuccess("Tarefa atualizada com sucesso!");
+                showSuccess("Tarefa atualizada com sucesso!");
             }
 
-            view.finalizarEdicao();
+            // A nova TarefaFrame gerencia sua própria edição
             carregarTarefas();
 
         } catch (IllegalArgumentException e) {
             logger.warn("Dados inválidos para salvar tarefa: {}", e.getMessage());
-            view.showError(e.getMessage());
+            showError(e.getMessage());
         } catch (SQLException e) {
             logger.error("Erro de banco de dados ao salvar tarefa", e);
-            view.showError("Erro ao salvar tarefa: " + e.getMessage());
+            showError("Erro ao salvar tarefa: " + e.getMessage());
         }
     }
 
     public void excluirTarefa(Long id) {
-        if (!view.confirmarAcao("Deseja realmente excluir esta tarefa?")) {
+        boolean confirmar = false;
+        if (tarefaFrame != null) {
+            confirmar = tarefaFrame.confirmarAcao("Deseja realmente excluir esta tarefa?");
+        }
+        
+        if (!confirmar) {
             return;
         }
         try {
             tarefaService.remover(id);
-            view.showSuccess("Tarefa excluída com sucesso!");
-            view.finalizarEdicao();
+            showSuccess("Tarefa excluída com sucesso!");
             carregarTarefas();
         } catch (IllegalArgumentException e) {
             logger.warn("Erro de validação ao excluir tarefa: {}", e.getMessage());
-            view.showError(e.getMessage());
+            showError(e.getMessage());
         } catch (SQLException e) {
             logger.error("Erro de banco de dados ao excluir tarefa", e);
-            view.showError("Erro ao excluir tarefa: " + e.getMessage());
+            showError("Erro ao excluir tarefa: " + e.getMessage());
+        }
+    }
+
+    // Novos métodos para a interface melhorada
+    public Tarefa buscarTarefaPorId(Long id) throws SQLException {
+        Optional<Tarefa> tarefa = tarefaService.buscarPorId(id);
+        return tarefa.orElse(null);
+    }
+
+    public void criarTarefa(Tarefa tarefa) throws SQLException {
+        tarefaService.salvar(tarefa);
+    }
+
+    public void atualizarTarefa(Tarefa tarefa) throws SQLException {
+        tarefaService.atualizar(tarefa);
+    }
+
+    public void removerTarefa(Long id) throws SQLException {
+        tarefaService.remover(id);
+    }
+
+    public void pesquisarTarefas(String termo) throws SQLException {
+        List<Tarefa> tarefas = tarefaService.pesquisar(termo);
+        atualizarView(tarefas);
+    }
+
+    public void filtrarPorProjeto(Long projetoId) throws SQLException {
+        List<Tarefa> tarefas = tarefaService.listarPorProjeto(projetoId);
+        atualizarView(tarefas);
+    }
+
+    public void filtrarPorEquipe(Long equipeId) throws SQLException {
+        List<Tarefa> tarefas = tarefaService.listarPorEquipe(equipeId);
+        atualizarView(tarefas);
+    }
+
+    public void filtrarPorStatus(StatusTarefa status) throws SQLException {
+        List<Tarefa> tarefas = tarefaService.listarPorStatus(status);
+        atualizarView(tarefas);
+    }
+
+    public void carregarTarefasAtrasadas() throws SQLException {
+        List<Tarefa> tarefas = tarefaService.listarTarefasAtrasadas();
+        atualizarView(tarefas);
+    }
+
+    private void atualizarView(List<Tarefa> tarefas) {
+        if (tarefaFrame != null) {
+            tarefaFrame.atualizarTabela(tarefas);
+        }
+    }
+
+    private void showError(String message) {
+        if (tarefaFrame != null) {
+            tarefaFrame.showError(message);
+        }
+    }
+
+    private void showSuccess(String message) {
+        if (tarefaFrame != null) {
+            tarefaFrame.showSuccess(message);
         }
     }
 }

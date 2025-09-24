@@ -257,6 +257,7 @@ CREATE TABLE tarefa (
     -- Relacionamentos
     projeto_id BIGINT NOT NULL,
     responsavel_id BIGINT,
+    equipe_id BIGINT,
     criador_id BIGINT NOT NULL,
     
     -- Auditoria
@@ -266,10 +267,12 @@ CREATE TABLE tarefa (
     FOREIGN KEY (status) REFERENCES status_tarefa(codigo),
     FOREIGN KEY (projeto_id) REFERENCES projeto(id) ON DELETE CASCADE,
     FOREIGN KEY (responsavel_id) REFERENCES usuario(id) ON DELETE SET NULL,
+    FOREIGN KEY (equipe_id) REFERENCES equipe(id) ON DELETE SET NULL,
     FOREIGN KEY (criador_id) REFERENCES usuario(id) ON DELETE RESTRICT,
     
     INDEX idx_tarefa_projeto (projeto_id),
     INDEX idx_tarefa_responsavel (responsavel_id),
+    INDEX idx_tarefa_equipe (equipe_id),
     INDEX idx_tarefa_status (status),
     INDEX idx_tarefa_prioridade (prioridade)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

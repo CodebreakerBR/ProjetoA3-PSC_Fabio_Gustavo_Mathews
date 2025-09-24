@@ -20,6 +20,8 @@ public class Tarefa {
     private Long projetoId;
     private Usuario responsavel;
     private Long responsavelId;
+    private Equipe equipe;
+    private Long equipeId;
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
 
@@ -174,6 +176,25 @@ public class Tarefa {
 
     public void setResponsavelId(Long responsavelId) {
         this.responsavelId = responsavelId;
+        this.atualizadoEm = LocalDateTime.now();
+    }
+
+    public Equipe getEquipe() {
+        return equipe;
+    }
+
+    public void setEquipe(Equipe equipe) {
+        this.equipe = equipe;
+        this.equipeId = equipe != null ? equipe.getId() : null;
+        this.atualizadoEm = LocalDateTime.now();
+    }
+
+    public Long getEquipeId() {
+        return equipeId;
+    }
+
+    public void setEquipeId(Long equipeId) {
+        this.equipeId = equipeId;
         this.atualizadoEm = LocalDateTime.now();
     }
 

@@ -2,6 +2,9 @@ package com.gestao.projetos.dao;
 
 import com.gestao.projetos.model.StatusTarefa;
 import com.gestao.projetos.model.Tarefa;
+import com.gestao.projetos.model.Projeto;
+import com.gestao.projetos.model.Usuario;
+import com.gestao.projetos.model.Equipe;
 import com.gestao.projetos.util.DatabaseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,12 +21,12 @@ public class TarefaDAO implements BaseDAO<Tarefa, Long> {
 
     private static final String INSERT_SQL =
             "INSERT INTO tarefa (titulo, descricao, status, prioridade, estimativa_horas, horas_trabalhadas, data_inicio, " +
-                    "data_fim_prevista, data_fim_real, projeto_id, responsavel_id, criador_id, criado_em, atualizado_em) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "data_fim_prevista, data_fim_real, projeto_id, responsavel_id, equipe_id, criador_id, criado_em, atualizado_em) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String UPDATE_SQL =
             "UPDATE tarefa SET titulo = ?, descricao = ?, status = ?, prioridade = ?, estimativa_horas = ?, horas_trabalhadas = ?, " +
-                    "data_inicio = ?, data_fim_prevista = ?, data_fim_real = ?, projeto_id = ?, responsavel_id = ?, atualizado_em = ? WHERE id = ?";
+                    "data_inicio = ?, data_fim_prevista = ?, data_fim_real = ?, projeto_id = ?, responsavel_id = ?, equipe_id = ?, atualizado_em = ? WHERE id = ?";
 
     private static final String DELETE_SQL = "DELETE FROM tarefa WHERE id = ?";
     private static final String SELECT_BY_ID_SQL = "SELECT * FROM tarefa WHERE id = ?";
@@ -55,9 +58,10 @@ public class TarefaDAO implements BaseDAO<Tarefa, Long> {
             statement.setObject(9, tarefa.getDataFimReal());
             statement.setLong(10, tarefa.getProjetoId());
             statement.setObject(11, tarefa.getResponsavelId(), Types.BIGINT);
-            statement.setObject(12, tarefa.getResponsavelId(), Types.BIGINT); // Usando responsável como criador_id
-            statement.setTimestamp(13, Timestamp.valueOf(tarefa.getCriadoEm()));
-            statement.setTimestamp(14, Timestamp.valueOf(tarefa.getAtualizadoEm()));
+            statement.setObject(12, tarefa.getEquipeId(), Types.BIGINT);
+            statement.setObject(13, tarefa.getResponsavelId(), Types.BIGINT); // Usando responsável como criador_id
+            statement.setTimestamp(14, Timestamp.valueOf(tarefa.getCriadoEm()));
+            statement.setTimestamp(15, Timestamp.valueOf(tarefa.getAtualizadoEm()));
 
             statement.executeUpdate();
 
@@ -98,8 +102,9 @@ public class TarefaDAO implements BaseDAO<Tarefa, Long> {
             statement.setObject(9, tarefa.getDataFimReal());
             statement.setLong(10, tarefa.getProjetoId());
             statement.setObject(11, tarefa.getResponsavelId(), Types.BIGINT);
-            statement.setTimestamp(12, Timestamp.valueOf(tarefa.getAtualizadoEm()));
-            statement.setLong(13, tarefa.getId()); // WHERE
+            statement.setObject(12, tarefa.getEquipeId(), Types.BIGINT);
+            statement.setTimestamp(13, Timestamp.valueOf(tarefa.getAtualizadoEm()));
+            statement.setLong(14, tarefa.getId()); // WHERE
 
             statement.executeUpdate();
             DatabaseUtil.commit(connection);
@@ -211,13 +216,43 @@ public class TarefaDAO implements BaseDAO<Tarefa, Long> {
             tarefa.setDataFimReal(dataFimReal.toLocalDate());
         }
 
+        // Definir IDs
         tarefa.setProjetoId(rs.getLong("projeto_id"));
         tarefa.setResponsavelId((Long) rs.getObject("responsavel_id"));
+        tarefa.setEquipeId((Long) rs.getObject("equipe_id"));
+
+        // Carregar objetos relacionados
+        carregarObjetosRelacionados(tarefa);
 
         tarefa.setCriadoEm(rs.getTimestamp("criado_em").toLocalDateTime());
         tarefa.setAtualizadoEm(rs.getTimestamp("atualizado_em").toLocalDateTime());
 
         return tarefa;
+    }
+
+    private void carregarObjetosRelacionados(Tarefa tarefa) {
+        try {
+            // Carregar projeto
+            if (tarefa.getProjetoId() != null) {
+                ProjetoDAO projetoDAO = new ProjetoDAO();
+                projetoDAO.findById(tarefa.getProjetoId()).ifPresent(tarefa::setProjeto);
+            }
+
+            // Carregar responsável
+            if (tarefa.getResponsavelId() != null) {
+                UsuarioDAO usuarioDAO = new UsuarioDAO();
+                usuarioDAO.findById(tarefa.getResponsavelId()).ifPresent(tarefa::setResponsavel);
+            }
+
+            // Carregar equipe
+            if (tarefa.getEquipeId() != null) {
+                EquipeDAO equipeDAO = new EquipeDAO();
+                equipeDAO.findById(tarefa.getEquipeId()).ifPresent(tarefa::setEquipe);
+            }
+            
+        } catch (SQLException e) {
+            logger.warn("Erro ao carregar objetos relacionados para tarefa {}: {}", tarefa.getId(), e.getMessage());
+        }
     }
 
     public List<Tarefa> pesquisarPorTitulo(String termo) throws SQLException {
@@ -236,6 +271,124 @@ public class TarefaDAO implements BaseDAO<Tarefa, Long> {
             }
         } catch (SQLException e) {
             logger.error("Erro ao pesquisar tarefas por título", e);
+            throw e;
+        }
+        return tarefas;
+    }
+
+    public List<Tarefa> findByProjectoId(Long projetoId) throws SQLException {
+        if (projetoId == null || projetoId <= 0) {
+            return new ArrayList<>();
+        }
+        
+        String sql = "SELECT * FROM tarefa WHERE projeto_id = ? ORDER BY data_fim_prevista, prioridade DESC";
+        List<Tarefa> tarefas = new ArrayList<>();
+
+        try (Connection connection = DatabaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setLong(1, projetoId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    tarefas.add(mapResultSetToTarefa(resultSet));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar tarefas por projeto ID: {}", projetoId, e);
+            throw e;
+        }
+        return tarefas;
+    }
+
+    public List<Tarefa> findByEquipeId(Long equipeId) throws SQLException {
+        if (equipeId == null || equipeId <= 0) {
+            return new ArrayList<>();
+        }
+        
+        String sql = "SELECT * FROM tarefa WHERE equipe_id = ? ORDER BY data_fim_prevista, prioridade DESC";
+        List<Tarefa> tarefas = new ArrayList<>();
+
+        try (Connection connection = DatabaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setLong(1, equipeId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    tarefas.add(mapResultSetToTarefa(resultSet));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar tarefas por equipe ID: {}", equipeId, e);
+            throw e;
+        }
+        return tarefas;
+    }
+
+    public List<Tarefa> findByStatus(StatusTarefa status) throws SQLException {
+        if (status == null) {
+            return new ArrayList<>();
+        }
+        
+        String sql = "SELECT * FROM tarefa WHERE status = ? ORDER BY data_fim_prevista, prioridade DESC";
+        List<Tarefa> tarefas = new ArrayList<>();
+
+        try (Connection connection = DatabaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, status.getCodigo());
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    tarefas.add(mapResultSetToTarefa(resultSet));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar tarefas por status: {}", status, e);
+            throw e;
+        }
+        return tarefas;
+    }
+
+    public List<Tarefa> findByResponsavelId(Long responsavelId) throws SQLException {
+        if (responsavelId == null || responsavelId <= 0) {
+            return new ArrayList<>();
+        }
+        
+        String sql = "SELECT * FROM tarefa WHERE responsavel_id = ? ORDER BY data_fim_prevista, prioridade DESC";
+        List<Tarefa> tarefas = new ArrayList<>();
+
+        try (Connection connection = DatabaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setLong(1, responsavelId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    tarefas.add(mapResultSetToTarefa(resultSet));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar tarefas por responsável ID: {}", responsavelId, e);
+            throw e;
+        }
+        return tarefas;
+    }
+
+    public List<Tarefa> findTarefasAtrasadas() throws SQLException {
+        String sql = "SELECT * FROM tarefa WHERE data_fim_prevista < CURDATE() AND status NOT IN ('CONCLUIDA', 'CANCELADA') ORDER BY data_fim_prevista, prioridade DESC";
+        List<Tarefa> tarefas = new ArrayList<>();
+
+        try (Connection connection = DatabaseUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            
+            while (resultSet.next()) {
+                tarefas.add(mapResultSetToTarefa(resultSet));
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar tarefas atrasadas", e);
             throw e;
         }
         return tarefas;

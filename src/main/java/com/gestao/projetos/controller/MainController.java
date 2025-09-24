@@ -3,6 +3,8 @@ package com.gestao.projetos.controller;
 import com.gestao.projetos.view.*;
 import com.gestao.projetos.util.DatabaseUtil;
 import com.gestao.projetos.util.SessionManager;
+import com.gestao.projetos.util.AccessValidator;
+import com.gestao.projetos.service.AuthorizationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.gestao.projetos.view.ProjetoView;
@@ -25,30 +27,36 @@ public class MainController {
      * Abre a janela de gestão de usuários
      */
     public void abrirGestaoUsuarios() {
-        try {
-            JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
-            for (JInternalFrame frame : frames) {
-                if (frame instanceof UsuarioFrame) {
-                    frame.toFront();
-                    frame.setSelected(true);
-                    return;
+        AccessValidator.executeWithAccess(
+            AuthorizationService.RECURSO_USUARIOS, 
+            mainFrame, 
+            () -> {
+                try {
+                    JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
+                    for (JInternalFrame frame : frames) {
+                        if (frame instanceof UsuarioFrame) {
+                            frame.toFront();
+                            frame.setSelected(true);
+                            return;
+                        }
+                    }
+
+                    UsuarioFrame usuarioFrame = new UsuarioFrame();
+                    mainFrame.addInternalFrame(usuarioFrame);
+                    usuarioFrame.setVisible(true);
+                    mainFrame.updateStatusMessage("Gestão de Usuários aberta");
+
+                } catch (Exception e) {
+                    logger.error("Erro ao abrir gestão de usuários", e);
+                    JOptionPane.showMessageDialog(
+                            mainFrame,
+                            "Erro ao abrir gestão de usuários: " + e.getMessage(),
+                            "Erro",
+                            JOptionPane.ERROR_MESSAGE
+                    );
                 }
             }
-
-            UsuarioFrame usuarioFrame = new UsuarioFrame();
-            mainFrame.addInternalFrame(usuarioFrame);
-            usuarioFrame.setVisible(true);
-            mainFrame.updateStatusMessage("Gestão de Usuários aberta");
-
-        } catch (Exception e) {
-            logger.error("Erro ao abrir gestão de usuários", e);
-            JOptionPane.showMessageDialog(
-                    mainFrame,
-                    "Erro ao abrir gestão de usuários: " + e.getMessage(),
-                    "Erro",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        );
     }
 
 
@@ -56,32 +64,38 @@ public class MainController {
      * Abre a janela de gestão de projetos
      */
     public void abrirGestaoProjetos() {
-        try {
-            // Verifica se já existe uma janela aberta
-            JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
-            for (JInternalFrame frame : frames) {
-                if (frame instanceof ProjetoView) {
-                    frame.toFront();
-                    frame.setSelected(true);
-                    return;
+        AccessValidator.executeWithAccess(
+            AuthorizationService.RECURSO_PROJETOS, 
+            mainFrame, 
+            () -> {
+                try {
+                    // Verifica se já existe uma janela aberta
+                    JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
+                    for (JInternalFrame frame : frames) {
+                        if (frame instanceof ProjetoView) {
+                            frame.toFront();
+                            frame.setSelected(true);
+                            return;
+                        }
+                    }
+
+                    // Cria nova janela
+                    ProjetoView projetoView = new ProjetoView();
+                    mainFrame.addInternalFrame(projetoView);
+                    projetoView.setVisible(true);
+                    mainFrame.updateStatusMessage("Gestão de Projetos aberta");
+
+                } catch (Exception e) {
+                    logger.error("Erro ao abrir gestão de projetos", e);
+                    JOptionPane.showMessageDialog(
+                            mainFrame,
+                            "Erro ao abrir gestão de projetos: " + e.getMessage(),
+                            "Erro",
+                            JOptionPane.ERROR_MESSAGE
+                    );
                 }
             }
-
-            // Cria nova janela
-            ProjetoView projetoView = new ProjetoView();
-            mainFrame.addInternalFrame(projetoView);
-            projetoView.setVisible(true);
-            mainFrame.updateStatusMessage("Gestão de Projetos aberta");
-
-        } catch (Exception e) {
-            logger.error("Erro ao abrir gestão de projetos", e);
-            JOptionPane.showMessageDialog(
-                    mainFrame,
-                    "Erro ao abrir gestão de projetos: " + e.getMessage(),
-                    "Erro",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        );
     }
 
 
@@ -90,30 +104,36 @@ public class MainController {
      * Abre a janela de gestão de equipes
      */
     public void abrirGestaoEquipes() {
-        try {
-            JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
-            for (JInternalFrame frame : frames) {
-                if (frame instanceof EquipeView) {
-                    frame.toFront();
-                    frame.setSelected(true);
-                    return;
+        AccessValidator.executeWithAccess(
+            AuthorizationService.RECURSO_PROJETOS, 
+            mainFrame, 
+            () -> {
+                try {
+                    JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
+                    for (JInternalFrame frame : frames) {
+                        if (frame instanceof EquipeView) {
+                            frame.toFront();
+                            frame.setSelected(true);
+                            return;
+                        }
+                    }
+
+                    EquipeView equipeView = new EquipeView();
+                    mainFrame.addInternalFrame(equipeView);
+                    equipeView.setVisible(true);
+                    mainFrame.updateStatusMessage("Gestão de Equipes aberta");
+
+                } catch (Exception e) {
+                    logger.error("Erro ao abrir gestão de equipes", e);
+                    JOptionPane.showMessageDialog(
+                            mainFrame,
+                            "Erro ao abrir gestão de equipes: " + e.getMessage(),
+                            "Erro",
+                            JOptionPane.ERROR_MESSAGE
+                    );
                 }
             }
-
-            EquipeView equipeView = new EquipeView();
-            mainFrame.addInternalFrame(equipeView);
-            equipeView.setVisible(true);
-            mainFrame.updateStatusMessage("Gestão de Equipes aberta");
-
-        } catch (Exception e) {
-            logger.error("Erro ao abrir gestão de equipes", e);
-            JOptionPane.showMessageDialog(
-                    mainFrame,
-                    "Erro ao abrir gestão de equipes: " + e.getMessage(),
-                    "Erro",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        );
     }
 
 
@@ -121,72 +141,96 @@ public class MainController {
      * Abre a janela de gestão de tarefas
      */
     public void abrirGestaoTarefas() {
-        try {
-            // Implementação futura
-            JOptionPane.showMessageDialog(
-                mainFrame,
-                "Gestão de Tarefas será implementada em breve",
-                "Em Desenvolvimento",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            
-        } catch (Exception e) {
-            logger.error("Erro ao abrir gestão de tarefas", e);
-        }
+        AccessValidator.executeWithAccess(
+            AuthorizationService.RECURSO_TAREFAS, 
+            mainFrame, 
+            () -> {
+                try {
+                    // Implementação futura
+                    JOptionPane.showMessageDialog(
+                        mainFrame,
+                        "Gestão de Tarefas será implementada em breve",
+                        "Em Desenvolvimento",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                    
+                } catch (Exception e) {
+                    logger.error("Erro ao abrir gestão de tarefas", e);
+                }
+            }
+        );
     }
 
     /**
      * Abre o dashboard
      */
     public void abrirDashboard() {
-        try {
-            // Implementação futura
-            JOptionPane.showMessageDialog(
-                mainFrame,
-                "Dashboard será implementado em breve",
-                "Em Desenvolvimento",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            
-        } catch (Exception e) {
-            logger.error("Erro ao abrir dashboard", e);
-        }
+        AccessValidator.executeWithAccess(
+            AuthorizationService.RECURSO_DASHBOARD, 
+            mainFrame, 
+            () -> {
+                try {
+                    // Implementação futura
+                    JOptionPane.showMessageDialog(
+                        mainFrame,
+                        "Dashboard será implementado em breve",
+                        "Em Desenvolvimento",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                    
+                } catch (Exception e) {
+                    logger.error("Erro ao abrir dashboard", e);
+                }
+            }
+        );
     }
 
     /**
      * Abre relatórios de projetos
      */
     public void abrirRelatoriosProjetos() {
-        try {
-            // Implementação futura
-            JOptionPane.showMessageDialog(
-                mainFrame,
-                "Relatórios de Projetos será implementado em breve",
-                "Em Desenvolvimento",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            
-        } catch (Exception e) {
-            logger.error("Erro ao abrir relatórios de projetos", e);
-        }
+        AccessValidator.executeWithAccess(
+            AuthorizationService.RECURSO_RELATORIOS, 
+            mainFrame, 
+            () -> {
+                try {
+                    // Implementação futura
+                    JOptionPane.showMessageDialog(
+                        mainFrame,
+                        "Relatórios de Projetos será implementado em breve",
+                        "Em Desenvolvimento",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                    
+                } catch (Exception e) {
+                    logger.error("Erro ao abrir relatórios de projetos", e);
+                }
+            }
+        );
     }
 
     /**
      * Abre relatórios de usuários
      */
     public void abrirRelatoriosUsuarios() {
-        try {
-            // Implementação futura
-            JOptionPane.showMessageDialog(
-                mainFrame,
-                "Relatórios de Usuários será implementado em breve",
-                "Em Desenvolvimento",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            
-        } catch (Exception e) {
-            logger.error("Erro ao abrir relatórios de usuários", e);
-        }
+        AccessValidator.executeWithAccess(
+            AuthorizationService.RECURSO_USUARIOS, 
+            mainFrame, 
+            () -> {
+                try {
+                    // Implementação futura
+                    JOptionPane.showMessageDialog(
+                        mainFrame,
+                        "Relatórios de Usuários será implementado em breve",
+                        "Em Desenvolvimento",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                    
+                } catch (Exception e) {
+                    logger.error("Erro ao abrir relatórios de usuários", e);
+                }
+            }
+        );
     }
 
     /**

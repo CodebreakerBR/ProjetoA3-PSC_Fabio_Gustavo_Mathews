@@ -1,6 +1,9 @@
 package com.gestao.projetos.service;
 
 import com.gestao.projetos.model.Usuario;
+import com.gestao.projetos.model.Credencial;
+import com.gestao.projetos.dao.UsuarioDAO;
+import com.gestao.projetos.dao.CredencialDAO;
 import com.gestao.projetos.util.DatabaseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,12 +13,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.util.Optional;
 
 public class AuthenticationService {
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);
+    
+    private final UsuarioDAO usuarioDAO;
+    private final CredencialDAO credencialDAO;
+    
     public AuthenticationService() {
-        // JBCrypt não precisa de instância, usa métodos estáticos
+        this.usuarioDAO = new UsuarioDAO();
+        this.credencialDAO = new CredencialDAO();
         logger.debug("AuthenticationService inicializado");
     }
 
@@ -25,71 +33,51 @@ public class AuthenticationService {
             return null;
         }
 
-        try (Connection conn = DatabaseUtil.getConnection()) {
-            String sql = """
-                SELECT u.id, u.nome, u.email, u.ativo, c.hash
-                FROM usuario u
-                INNER JOIN credencial c ON u.id = c.usuario_id
-                WHERE u.email = ? AND u.ativo = TRUE
-                """;
-
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, email.trim().toLowerCase());
-
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        String hashedPassword = rs.getString("hash");
-
-                        if (BCrypt.checkpw(password, hashedPassword)) {
-                            Usuario usuario = new Usuario();
-                            usuario.setId(rs.getLong("id"));
-                            usuario.setNome(rs.getString("nome"));
-                            usuario.setEmail(rs.getString("email"));
-                            usuario.setAtivo(rs.getBoolean("ativo"));
-
-                            registrarLogAcesso(usuario.getId(), "LOGIN", true, null);
-
-                            logger.info("Usuário autenticado com sucesso: {}", email);
-                            return usuario;
-                        } else {
-                            Long userId = rs.getLong("id");
-                            registrarLogAcesso(userId, "LOGIN_FAILED", false, "Senha incorreta");
-                            logger.warn("Tentativa de login com senha incorreta para usuário: {}", email);
-                        }
-                    } else {
-                        registrarLogAcesso(null, "LOGIN_FAILED", false, "Usuário não encontrado: " + email);
-                        logger.warn("Tentativa de login com usuário não encontrado: {}", email);
-                    }
-                }
+        try {
+            // Buscar usuário pelo email usando DAO
+            Optional<Usuario> usuarioOpt = usuarioDAO.findByEmail(email.trim().toLowerCase());
+            
+            if (usuarioOpt.isEmpty()) {
+                registrarLogAcesso(null, "LOGIN_FAILED", false, "Usuário não encontrado: " + email);
+                logger.warn("Tentativa de login com usuário não encontrado: {}", email);
+                return null;
             }
+            
+            Usuario usuario = usuarioOpt.get();
+            
+            if (!usuario.isAtivo()) {
+                registrarLogAcesso(usuario.getId(), "LOGIN_FAILED", false, "Usuário inativo");
+                logger.warn("Tentativa de login com usuário inativo: {}", email);
+                return null;
+            }
+            
+            // Buscar credencial do usuário usando DAO
+            Optional<Credencial> credencialOpt = credencialDAO.findByUserId(usuario.getId());
+            
+            if (credencialOpt.isEmpty()) {
+                registrarLogAcesso(usuario.getId(), "LOGIN_FAILED", false, "Credencial não encontrada");
+                logger.warn("Credencial não encontrada para usuário: {}", email);
+                return null;
+            }
+            
+            Credencial credencial = credencialOpt.get();
+            
+            // Verificar senha
+            if (BCrypt.checkpw(password, credencial.getHash())) {
+                registrarLogAcesso(usuario.getId(), "LOGIN", true, null);
+                logger.info("Usuário autenticado com sucesso: {}", email);
+                return usuario;
+            } else {
+                registrarLogAcesso(usuario.getId(), "LOGIN_FAILED", false, "Senha incorreta");
+                logger.warn("Tentativa de login com senha incorreta para usuário: {}", email);
+                return null;
+            }
+            
         } catch (SQLException e) {
             logger.error("Erro ao autenticar usuário: {}", email, e);
             registrarLogAcesso(null, "LOGIN_ERROR", false, "Erro de banco de dados: " + e.getMessage());
+            return null;
         }
-        return null;
-    }
-
-    public boolean userExists(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return false;
-        }
-
-        try (Connection conn = DatabaseUtil.getConnection()) {
-            String sql = "SELECT COUNT(*) FROM usuario WHERE email = ? AND ativo = TRUE";
-
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, email.trim().toLowerCase());
-
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return rs.getInt(1) > 0;
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("Erro ao verificar existência do usuário: {}", email, e);
-        }
-        return false;
     }
 
     public Usuario createUser(String nome, String email, String password) {
@@ -99,78 +87,71 @@ public class AuthenticationService {
             return null;
         }
 
-        if (userExists(email)) {
-            logger.warn("Tentativa de criar usuário que já existe: {}", email);
-            return null;
-        }
-
-        Connection conn = null;
         try {
-            conn = DatabaseUtil.getConnection();
-            conn.setAutoCommit(false);
+            // Verificar se usuário já existe usando DAO
+            Optional<Usuario> existente = usuarioDAO.findByEmail(email.trim().toLowerCase());
+            if (existente.isPresent()) {
+                logger.warn("Tentativa de criar usuário que já existe: {}", email);
+                return null;
+            }
 
-            String userSql = "INSERT INTO usuario (nome, email, ativo) VALUES (?, ?, TRUE)";
-            long userId;
+            Connection conn = null;
+            try {
+                conn = DatabaseUtil.getConnection();
+                conn.setAutoCommit(false);
 
-            try (PreparedStatement userStmt = conn.prepareStatement(userSql, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                userStmt.setString(1, nome.trim());
-                userStmt.setString(2, email.trim().toLowerCase());
+                // Criar usuário usando DAO
+                Usuario novoUsuario = new Usuario();
+                novoUsuario.setNome(nome.trim());
+                novoUsuario.setEmail(email.trim().toLowerCase());
+                novoUsuario.setAtivo(true);
 
-                int affectedRows = userStmt.executeUpdate();
-                if (affectedRows == 0) {
+                Usuario usuarioSalvo = usuarioDAO.save(novoUsuario);
+                if (usuarioSalvo == null || usuarioSalvo.getId() == null) {
                     throw new SQLException("Falha ao criar usuário");
                 }
 
-                try (ResultSet generatedKeys = userStmt.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        userId = generatedKeys.getLong(1);
-                    } else {
-                        throw new SQLException("Falha ao obter ID do usuário criado");
+                // Criar credencial usando DAO
+                String salt = BCrypt.gensalt(12);
+                String hashedPassword = BCrypt.hashpw(password, salt);
+
+                Credencial credencial = new Credencial();
+                credencial.setUsuarioId(usuarioSalvo.getId());
+                credencial.setHash(hashedPassword);
+                credencial.setSalt(salt);
+
+                Credencial credencialSalva = credencialDAO.save(credencial);
+                if (credencialSalva == null) {
+                    throw new SQLException("Falha ao criar credencial");
+                }
+
+                conn.commit();
+                logger.info("Usuário criado com sucesso: {}", email);
+                return usuarioSalvo;
+
+            } catch (SQLException e) {
+                if (conn != null) {
+                    try {
+                        conn.rollback();
+                    } catch (SQLException ex) {
+                        logger.error("Erro ao fazer rollback", ex);
+                    }
+                }
+                throw e;
+            } finally {
+                if (conn != null) {
+                    try {
+                        conn.setAutoCommit(true);
+                        conn.close();
+                    } catch (SQLException e) {
+                        logger.error("Erro ao fechar conexão", e);
                     }
                 }
             }
-
-            String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
-            String credentialSql = "INSERT INTO credencial (hash, salt, usuario_id) VALUES (?, ?, ?)";
-
-            try (PreparedStatement credStmt = conn.prepareStatement(credentialSql)) {
-                credStmt.setString(1, hashedPassword);
-                credStmt.setString(2, "bcrypt"); // Salt é gerenciado pelo BCrypt
-                credStmt.setLong(3, userId);
-
-                credStmt.executeUpdate();
-            }
-
-            conn.commit();
-
-            Usuario usuario = new Usuario();
-            usuario.setId(userId);
-            usuario.setNome(nome.trim());
-            usuario.setEmail(email.trim().toLowerCase());
-            usuario.setAtivo(true);
-
-            logger.info("Usuário criado com sucesso: {}", email);
-            return usuario;
         } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    logger.error("Erro ao fazer rollback", ex);
-                }
-            }
             logger.error("Erro ao criar usuário: {}", email, e);
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("Erro ao fechar conexão", e);
-                }
-            }
+            return null;
         }
-        return null;
     }
 
     public boolean changePassword(Long userId, String currentPassword, String newPassword) {
@@ -179,40 +160,41 @@ public class AuthenticationService {
             return false;
         }
 
-        try (Connection conn = DatabaseUtil.getConnection()) {
-            String checkSql = "SELECT hash FROM credencial WHERE usuario_id = ?";
-
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                checkStmt.setLong(1, userId);
-
-                try (ResultSet rs = checkStmt.executeQuery()) {
-                    if (rs.next()) {
-                        String currentHash = rs.getString("hash");
-
-                        if (!BCrypt.checkpw(currentPassword, currentHash)) {
-                            logger.warn("Tentativa de alteração de senha com senha atual incorreta para usuário ID: {}", userId);
-                            return false;
-                        }
-
-                        String updateSql = "UPDATE credencial SET hash = ?, atualizado_em = CURRENT_TIMESTAMP WHERE usuario_id = ?";
-
-                        try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-                            updateStmt.setString(1, BCrypt.hashpw(newPassword, BCrypt.gensalt()));
-                            updateStmt.setLong(2, userId);
-
-                            int affectedRows = updateStmt.executeUpdate();
-                            if (affectedRows > 0) {
-                                logger.info("Senha alterada com sucesso para usuário ID: {}", userId);
-                                return true;
-                            }
-                        }
-                    }
-                }
+        try {
+            // Buscar credencial atual usando DAO
+            Optional<Credencial> credencialOpt = credencialDAO.findByUserId(userId);
+            
+            if (credencialOpt.isEmpty()) {
+                logger.warn("Credencial não encontrada para usuário ID: {}", userId);
+                return false;
             }
+            
+            Credencial credencial = credencialOpt.get();
+            
+            // Verificar senha atual
+            if (!BCrypt.checkpw(currentPassword, credencial.getHash())) {
+                logger.warn("Tentativa de alteração de senha com senha atual incorreta para usuário ID: {}", userId);
+                return false;
+            }
+            
+            // Gerar novo hash
+            String newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt(12));
+            
+            // Atualizar credencial usando DAO
+            boolean updated = credencialDAO.updateHashByUserId(userId, newHash);
+            
+            if (updated) {
+                logger.info("Senha alterada com sucesso para usuário ID: {}", userId);
+                return true;
+            } else {
+                logger.warn("Falha ao atualizar senha para usuário ID: {}", userId);
+                return false;
+            }
+            
         } catch (SQLException e) {
             logger.error("Erro ao alterar senha para usuário ID: {}", userId, e);
+            return false;
         }
-        return false;
     }
 
     private void registrarLogAcesso(Long userId, String acao, boolean sucesso, String detalhes) {

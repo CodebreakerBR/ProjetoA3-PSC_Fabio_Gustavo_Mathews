@@ -20,25 +20,31 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
     
     // Queries SQL
     private static final String INSERT_SQL = 
-        "INSERT INTO usuario (nome, email, ativo, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?)";
+        "INSERT INTO usuario (nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     
     private static final String UPDATE_SQL = 
-        "UPDATE usuario SET nome = ?, email = ?, ativo = ?, atualizado_em = ? WHERE id = ?";
+        "UPDATE usuario SET nome = ?, cpf = ?, email = ?, cargo = ?, login = ?, ativo = ?, atualizado_em = ? WHERE id = ?";
     
     private static final String DELETE_SQL = 
         "DELETE FROM usuario WHERE id = ?";
     
     private static final String SELECT_BY_ID_SQL = 
-        "SELECT id, nome, email, ativo, criado_em, atualizado_em FROM usuario WHERE id = ?";
+        "SELECT id, nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em FROM usuario WHERE id = ?";
     
     private static final String SELECT_ALL_SQL = 
-        "SELECT id, nome, email, ativo, criado_em, atualizado_em FROM usuario ORDER BY nome";
+        "SELECT id, nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em FROM usuario ORDER BY nome";
     
     private static final String SELECT_BY_EMAIL_SQL = 
-        "SELECT id, nome, email, ativo, criado_em, atualizado_em FROM usuario WHERE email = ?";
+        "SELECT id, nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em FROM usuario WHERE email = ?";
+    
+    private static final String SELECT_BY_LOGIN_SQL = 
+        "SELECT id, nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em FROM usuario WHERE login = ?";
+    
+    private static final String SELECT_BY_CPF_SQL = 
+        "SELECT id, nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em FROM usuario WHERE cpf = ?";
     
     private static final String SELECT_ACTIVE_SQL = 
-        "SELECT id, nome, email, ativo, criado_em, atualizado_em FROM usuario WHERE ativo = true ORDER BY nome";
+        "SELECT id, nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em FROM usuario WHERE ativo = true ORDER BY nome";
     
     private static final String EXISTS_SQL = 
         "SELECT 1 FROM usuario WHERE id = ?";
@@ -48,6 +54,12 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
     
     private static final String EXISTS_EMAIL_SQL = 
         "SELECT 1 FROM usuario WHERE email = ? AND id != ?";
+    
+    private static final String EXISTS_LOGIN_SQL = 
+        "SELECT 1 FROM usuario WHERE login = ? AND id != ?";
+    
+    private static final String EXISTS_CPF_SQL = 
+        "SELECT 1 FROM usuario WHERE cpf = ? AND id != ?";
 
     @Override
     public Usuario save(Usuario usuario) throws SQLException {
@@ -58,6 +70,16 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
         // Verifica se email já existe
         if (existsByEmail(usuario.getEmail())) {
             throw new SQLException("Email já está em uso: " + usuario.getEmail());
+        }
+        
+        // Verifica se login já existe
+        if (existsByLogin(usuario.getLogin())) {
+            throw new SQLException("Login já está em uso: " + usuario.getLogin());
+        }
+        
+        // Verifica se CPF já existe
+        if (existsByCpf(usuario.getCpf())) {
+            throw new SQLException("CPF já está em uso: " + usuario.getCpf());
         }
 
         Connection connection = null;
@@ -73,10 +95,13 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
             usuario.setAtualizadoEm(now);
             
             statement.setString(1, usuario.getNome());
-            statement.setString(2, usuario.getEmail());
-            statement.setBoolean(3, usuario.isAtivo());
-            statement.setTimestamp(4, Timestamp.valueOf(usuario.getCriadoEm()));
-            statement.setTimestamp(5, Timestamp.valueOf(usuario.getAtualizadoEm()));
+            statement.setString(2, usuario.getCpf());
+            statement.setString(3, usuario.getEmail());
+            statement.setString(4, usuario.getCargo());
+            statement.setString(5, usuario.getLogin());
+            statement.setBoolean(6, usuario.isAtivo());
+            statement.setTimestamp(7, Timestamp.valueOf(usuario.getCriadoEm()));
+            statement.setTimestamp(8, Timestamp.valueOf(usuario.getAtualizadoEm()));
             
             int affectedRows = statement.executeUpdate();
             if (affectedRows == 0) {
@@ -105,11 +130,63 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
             DatabaseUtil.closeConnection(connection);
         }
     }
+
+    /**
+     * Salva um Usuario usando uma conexão específica (para transações)
+     */
+    public Usuario save(Usuario usuario, Connection connection) throws SQLException {
+        if (usuario == null || !usuario.isValid()) {
+            throw new IllegalArgumentException("Usuário inválido para inserção");
+        }
+
+        PreparedStatement statement = null;
+        ResultSet generatedKeys = null;
+
+        try {
+            statement = connection.prepareStatement(INSERT_SQL, Statement.RETURN_GENERATED_KEYS);
+            
+            LocalDateTime now = LocalDateTime.now();
+            usuario.setCriadoEm(now);
+            usuario.setAtualizadoEm(now);
+            
+            statement.setString(1, usuario.getNome());
+            statement.setString(2, usuario.getCpf());
+            statement.setString(3, usuario.getEmail());
+            statement.setString(4, usuario.getCargo());
+            statement.setString(5, usuario.getLogin());
+            statement.setBoolean(6, usuario.isAtivo());
+            statement.setTimestamp(7, Timestamp.valueOf(usuario.getCriadoEm()));
+            statement.setTimestamp(8, Timestamp.valueOf(usuario.getAtualizadoEm()));
+            
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Falha ao inserir usuário, nenhuma linha afetada");
+            }
+            
+            generatedKeys = statement.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                usuario.setId(generatedKeys.getLong(1));
+                logger.debug("Usuário inserido com ID: {} usando conexão da transação", usuario.getId());
+            } else {
+                throw new SQLException("Falha ao inserir usuário, ID não gerado");
+            }
+            
+            return usuario;
+            
+        } catch (SQLException e) {
+            logger.error("Erro ao inserir usuário na transação: {}", usuario.getEmail(), e);
+            throw e;
+        } finally {
+            if (generatedKeys != null) generatedKeys.close();
+            if (statement != null) statement.close();
+            // NÃO fechar a conexão aqui pois ela é da transação
+        }
+    }
     public List<Usuario> searchByNomeOuEmail(String termo) throws SQLException {
-        String sql = "SELECT id, nome, email, ativo, criado_em, atualizado_em " +
-                "FROM usuario WHERE LOWER(nome) LIKE ? OR LOWER(email) LIKE ? ORDER BY nome";
+        String sql = "SELECT id, nome, cpf, email, cargo, login, ativo, criado_em, atualizado_em " +
+                "FROM usuario WHERE LOWER(nome) LIKE ? OR LOWER(email) LIKE ? OR LOWER(login) LIKE ? OR cpf LIKE ? ORDER BY nome";
         String filtro = "%" + termo.toLowerCase().trim() + "%";
-        return executeQuery(sql, filtro, filtro);
+        return executeQuery(sql, filtro, filtro, filtro, filtro);
     }
 
 
@@ -123,6 +200,16 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
         if (existsByEmailForOtherUser(usuario.getEmail(), usuario.getId())) {
             throw new SQLException("Email já está em uso por outro usuário: " + usuario.getEmail());
         }
+        
+        // Verifica se login já existe para outro usuário
+        if (existsByLoginForOtherUser(usuario.getLogin(), usuario.getId())) {
+            throw new SQLException("Login já está em uso por outro usuário: " + usuario.getLogin());
+        }
+        
+        // Verifica se CPF já existe para outro usuário
+        if (existsByCpfForOtherUser(usuario.getCpf(), usuario.getId())) {
+            throw new SQLException("CPF já está em uso por outro usuário: " + usuario.getCpf());
+        }
 
         Connection connection = null;
         PreparedStatement statement = null;
@@ -134,10 +221,13 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
             usuario.setAtualizadoEm(LocalDateTime.now());
             
             statement.setString(1, usuario.getNome());
-            statement.setString(2, usuario.getEmail());
-            statement.setBoolean(3, usuario.isAtivo());
-            statement.setTimestamp(4, Timestamp.valueOf(usuario.getAtualizadoEm()));
-            statement.setLong(5, usuario.getId());
+            statement.setString(2, usuario.getCpf());
+            statement.setString(3, usuario.getEmail());
+            statement.setString(4, usuario.getCargo());
+            statement.setString(5, usuario.getLogin());
+            statement.setBoolean(6, usuario.isAtivo());
+            statement.setTimestamp(7, Timestamp.valueOf(usuario.getAtualizadoEm()));
+            statement.setLong(8, usuario.getId());
             
             int affectedRows = statement.executeUpdate();
             if (affectedRows == 0) {
@@ -406,7 +496,10 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
         Usuario usuario = new Usuario();
         usuario.setId(rs.getLong("id"));
         usuario.setNome(rs.getString("nome"));
+        usuario.setCpf(rs.getString("cpf"));
         usuario.setEmail(rs.getString("email"));
+        usuario.setCargo(rs.getString("cargo"));
+        usuario.setLogin(rs.getString("login"));
         usuario.setAtivo(rs.getBoolean("ativo"));
         
         Timestamp criadoEm = rs.getTimestamp("criado_em");
@@ -420,5 +513,145 @@ public class UsuarioDAO implements BaseDAO<Usuario, Long> {
         }
         
         return usuario;
+    }
+
+    /**
+     * Busca usuário por login
+     */
+    public Optional<Usuario> findByLogin(String login) throws SQLException {
+        if (login == null || login.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            statement = connection.prepareStatement(SELECT_BY_LOGIN_SQL);
+            statement.setString(1, login.trim());
+            
+            resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return Optional.of(mapResultSetToUsuario(resultSet));
+            }
+            
+            return Optional.empty();
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar usuário por login: {}", login, e);
+            throw e;
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (statement != null) statement.close();
+            DatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Busca usuário por CPF
+     */
+    public Optional<Usuario> findByCpf(String cpf) throws SQLException {
+        if (cpf == null || cpf.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            statement = connection.prepareStatement(SELECT_BY_CPF_SQL);
+            statement.setString(1, cpf.trim());
+            
+            resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return Optional.of(mapResultSetToUsuario(resultSet));
+            }
+            
+            return Optional.empty();
+        } catch (SQLException e) {
+            logger.error("Erro ao buscar usuário por CPF: {}", cpf, e);
+            throw e;
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (statement != null) statement.close();
+            DatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Verifica se existe usuário com o login informado
+     */
+    public boolean existsByLogin(String login) throws SQLException {
+        return findByLogin(login).isPresent();
+    }
+
+    /**
+     * Verifica se existe outro usuário com o mesmo login
+     */
+    public boolean existsByLoginForOtherUser(String login, Long userId) throws SQLException {
+        if (login == null || login.trim().isEmpty()) {
+            return false;
+        }
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            statement = connection.prepareStatement(EXISTS_LOGIN_SQL);
+            statement.setString(1, login.trim());
+            statement.setLong(2, userId);
+            
+            resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            logger.error("Erro ao verificar login para outro usuário", e);
+            throw e;
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (statement != null) statement.close();
+            DatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Verifica se existe usuário com o CPF informado
+     */
+    public boolean existsByCpf(String cpf) throws SQLException {
+        return findByCpf(cpf).isPresent();
+    }
+
+    /**
+     * Verifica se existe outro usuário com o mesmo CPF
+     */
+    public boolean existsByCpfForOtherUser(String cpf, Long userId) throws SQLException {
+        if (cpf == null || cpf.trim().isEmpty()) {
+            return false;
+        }
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        try {
+            connection = DatabaseUtil.getConnection();
+            statement = connection.prepareStatement(EXISTS_CPF_SQL);
+            statement.setString(1, cpf.trim());
+            statement.setLong(2, userId);
+            
+            resultSet = statement.executeQuery();
+            return resultSet.next();
+        } catch (SQLException e) {
+            logger.error("Erro ao verificar CPF para outro usuário", e);
+            throw e;
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (statement != null) statement.close();
+            DatabaseUtil.closeConnection(connection);
+        }
     }
 }

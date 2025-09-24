@@ -1,7 +1,9 @@
 package com.gestao.projetos.view;
 
 import com.gestao.projetos.controller.MainController;
+import com.gestao.projetos.service.AuthorizationService;
 import com.gestao.projetos.util.DatabaseUtil;
+import com.gestao.projetos.util.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +19,7 @@ public class MainFrame extends JFrame {
     
     private static final Logger logger = LoggerFactory.getLogger(MainFrame.class);
     private final MainController controller;
+    private final AuthorizationService authService;
     
     // Componentes da interface
     private JMenuBar menuBar;
@@ -25,15 +28,18 @@ public class MainFrame extends JFrame {
     private JPanel statusPanel;
     private JLabel statusLabel;
     private JLabel connectionLabel;
+    private JLabel userLabel;
 
     public MainFrame() {
         this.controller = new MainController(this);
+        this.authService = new AuthorizationService();
         initializeComponents();
         setupLayout();
         setupMenus();
         setupToolBar();
         setupEventHandlers();
         setupFrame();
+        updateUserInfo();
     }
 
     /**
@@ -46,6 +52,7 @@ public class MainFrame extends JFrame {
         statusPanel = new JPanel(new BorderLayout());
         statusLabel = new JLabel("Sistema iniciado");
         connectionLabel = new JLabel();
+        userLabel = new JLabel();
         
         // Configurações do desktop pane
         desktopPane.setDragMode(JDesktopPane.OUTLINE_DRAG_MODE);
@@ -54,7 +61,11 @@ public class MainFrame extends JFrame {
         // Configurações da barra de status
         statusPanel.setBorder(BorderFactory.createLoweredBevelBorder());
         statusPanel.add(statusLabel, BorderLayout.WEST);
-        statusPanel.add(connectionLabel, BorderLayout.EAST);
+        
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        rightPanel.add(userLabel);
+        rightPanel.add(connectionLabel);
+        statusPanel.add(rightPanel, BorderLayout.EAST);
         
         updateConnectionStatus();
     }
@@ -91,52 +102,71 @@ public class MainFrame extends JFrame {
         JMenu menuCadastros = new JMenu("Cadastros");
         menuCadastros.setMnemonic('C');
         
-        JMenuItem itemUsuarios = new JMenuItem("Usuários");
-        itemUsuarios.setMnemonic('U');
-        itemUsuarios.setAccelerator(KeyStroke.getKeyStroke("ctrl U"));
-        itemUsuarios.addActionListener(e -> controller.abrirGestaoUsuarios());
+        // Usuários - apenas ADMINISTRADOR
+        if (authService.podeAcessar(AuthorizationService.RECURSO_USUARIOS)) {
+            JMenuItem itemUsuarios = new JMenuItem("Usuários");
+            itemUsuarios.setMnemonic('U');
+            itemUsuarios.setAccelerator(KeyStroke.getKeyStroke("ctrl U"));
+            itemUsuarios.addActionListener(e -> controller.abrirGestaoUsuarios());
+            menuCadastros.add(itemUsuarios);
+        }
         
-        JMenuItem itemProjetos = new JMenuItem("Projetos");
-        itemProjetos.setMnemonic('P');
-        itemProjetos.setAccelerator(KeyStroke.getKeyStroke("ctrl P"));
-        itemProjetos.addActionListener(e -> controller.abrirGestaoProjetos());
+        // Projetos - ADMINISTRADOR e GERENTE
+        if (authService.podeAcessar(AuthorizationService.RECURSO_PROJETOS)) {
+            JMenuItem itemProjetos = new JMenuItem("Projetos");
+            itemProjetos.setMnemonic('P');
+            itemProjetos.setAccelerator(KeyStroke.getKeyStroke("ctrl P"));
+            itemProjetos.addActionListener(e -> controller.abrirGestaoProjetos());
+            menuCadastros.add(itemProjetos);
+            
+            JMenuItem itemEquipes = new JMenuItem("Equipes");
+            itemEquipes.setMnemonic('E');
+            itemEquipes.setAccelerator(KeyStroke.getKeyStroke("ctrl E"));
+            itemEquipes.addActionListener(e -> controller.abrirGestaoEquipes());
+            menuCadastros.add(itemEquipes);
+        }
         
-        JMenuItem itemEquipes = new JMenuItem("Equipes");
-        itemEquipes.setMnemonic('E');
-        itemEquipes.setAccelerator(KeyStroke.getKeyStroke("ctrl E"));
-        itemEquipes.addActionListener(e -> controller.abrirGestaoEquipes());
-        
-        JMenuItem itemTarefas = new JMenuItem("Tarefas");
-        itemTarefas.setMnemonic('T');
-        itemTarefas.setAccelerator(KeyStroke.getKeyStroke("ctrl T"));
-        itemTarefas.addActionListener(e -> controller.abrirGestaoTarefas());
-        
-        menuCadastros.add(itemUsuarios);
-        menuCadastros.add(itemProjetos);
-        menuCadastros.add(itemEquipes);
-        menuCadastros.add(itemTarefas);
+        // Tarefas - todos os papéis
+        if (authService.podeAcessar(AuthorizationService.RECURSO_TAREFAS)) {
+            JMenuItem itemTarefas = new JMenuItem("Tarefas");
+            itemTarefas.setMnemonic('T');
+            itemTarefas.setAccelerator(KeyStroke.getKeyStroke("ctrl T"));
+            itemTarefas.addActionListener(e -> controller.abrirGestaoTarefas());
+            menuCadastros.add(itemTarefas);
+        }
         
         // Menu Relatórios
         JMenu menuRelatorios = new JMenu("Relatórios");
         menuRelatorios.setMnemonic('R');
         
-        JMenuItem itemDashboard = new JMenuItem("Dashboard");
-        itemDashboard.setMnemonic('D');
-        itemDashboard.setAccelerator(KeyStroke.getKeyStroke("F1"));
-        itemDashboard.addActionListener(e -> controller.abrirDashboard());
+        // Dashboard - todos os papéis
+        if (authService.podeAcessar(AuthorizationService.RECURSO_DASHBOARD)) {
+            JMenuItem itemDashboard = new JMenuItem("Dashboard");
+            itemDashboard.setMnemonic('D');
+            itemDashboard.setAccelerator(KeyStroke.getKeyStroke("F1"));
+            itemDashboard.addActionListener(e -> controller.abrirDashboard());
+            menuRelatorios.add(itemDashboard);
+        }
         
-        JMenuItem itemRelatoriosProjetos = new JMenuItem("Relatório de Projetos");
-        itemRelatoriosProjetos.setMnemonic('P');
-        itemRelatoriosProjetos.addActionListener(e -> controller.abrirRelatoriosProjetos());
-        
-        JMenuItem itemRelatoriosUsuarios = new JMenuItem("Relatório de Usuários");
-        itemRelatoriosUsuarios.setMnemonic('U');
-        itemRelatoriosUsuarios.addActionListener(e -> controller.abrirRelatoriosUsuarios());
-        
-        menuRelatorios.add(itemDashboard);
-        menuRelatorios.addSeparator();
-        menuRelatorios.add(itemRelatoriosProjetos);
-        menuRelatorios.add(itemRelatoriosUsuarios);
+        // Relatórios - ADMINISTRADOR e GERENTE
+        if (authService.podeAcessar(AuthorizationService.RECURSO_RELATORIOS)) {
+            if (menuRelatorios.getItemCount() > 0) {
+                menuRelatorios.addSeparator();
+            }
+            
+            JMenuItem itemRelatoriosProjetos = new JMenuItem("Relatório de Projetos");
+            itemRelatoriosProjetos.setMnemonic('P');
+            itemRelatoriosProjetos.addActionListener(e -> controller.abrirRelatoriosProjetos());
+            menuRelatorios.add(itemRelatoriosProjetos);
+            
+            // Relatório de usuários apenas para ADMINISTRADOR
+            if (authService.podeAcessar(AuthorizationService.RECURSO_USUARIOS)) {
+                JMenuItem itemRelatoriosUsuarios = new JMenuItem("Relatório de Usuários");
+                itemRelatoriosUsuarios.setMnemonic('U');
+                itemRelatoriosUsuarios.addActionListener(e -> controller.abrirRelatoriosUsuarios());
+                menuRelatorios.add(itemRelatoriosUsuarios);
+            }
+        }
         
         // Menu Janela
         JMenu menuJanela = new JMenu("Janela");
@@ -171,10 +201,14 @@ public class MainFrame extends JFrame {
         
         menuAjuda.add(itemSobre);
         
-        // Adiciona menus à barra
+        // Adiciona menus à barra (apenas se tiverem itens)
         menuBar.add(menuArquivo);
-        menuBar.add(menuCadastros);
-        menuBar.add(menuRelatorios);
+        if (menuCadastros.getItemCount() > 0) {
+            menuBar.add(menuCadastros);
+        }
+        if (menuRelatorios.getItemCount() > 0) {
+            menuBar.add(menuRelatorios);
+        }
         menuBar.add(menuJanela);
         menuBar.add(menuAjuda);
     }
@@ -186,28 +220,47 @@ public class MainFrame extends JFrame {
         toolBar.setFloatable(false);
         toolBar.setRollover(true);
         
-        // Botões da toolbar
-        JButton btnUsuarios = createToolbarButton("Usuários", "user.png", 
-            e -> controller.abrirGestaoUsuarios());
+        // Botões da toolbar baseados em permissões
+        boolean hasItems = false;
         
-        JButton btnProjetos = createToolbarButton("Projetos", "project.png", 
-            e -> controller.abrirGestaoProjetos());
+        // Usuários - apenas ADMINISTRADOR
+        if (authService.podeAcessar(AuthorizationService.RECURSO_USUARIOS)) {
+            JButton btnUsuarios = createToolbarButton("Usuários", "user.png", 
+                e -> controller.abrirGestaoUsuarios());
+            toolBar.add(btnUsuarios);
+            hasItems = true;
+        }
         
-        JButton btnEquipes = createToolbarButton("Equipes", "team.png", 
-            e -> controller.abrirGestaoEquipes());
+        // Projetos - ADMINISTRADOR e GERENTE
+        if (authService.podeAcessar(AuthorizationService.RECURSO_PROJETOS)) {
+            JButton btnProjetos = createToolbarButton("Projetos", "project.png", 
+                e -> controller.abrirGestaoProjetos());
+            JButton btnEquipes = createToolbarButton("Equipes", "team.png", 
+                e -> controller.abrirGestaoEquipes());
+            
+            toolBar.add(btnProjetos);
+            toolBar.add(btnEquipes);
+            hasItems = true;
+        }
         
-        JButton btnTarefas = createToolbarButton("Tarefas", "task.png", 
-            e -> controller.abrirGestaoTarefas());
+        // Tarefas - todos os papéis
+        if (authService.podeAcessar(AuthorizationService.RECURSO_TAREFAS)) {
+            JButton btnTarefas = createToolbarButton("Tarefas", "task.png", 
+                e -> controller.abrirGestaoTarefas());
+            toolBar.add(btnTarefas);
+            hasItems = true;
+        }
         
-        JButton btnDashboard = createToolbarButton("Dashboard", "dashboard.png", 
-            e -> controller.abrirDashboard());
-        
-        toolBar.add(btnUsuarios);
-        toolBar.add(btnProjetos);
-        toolBar.add(btnEquipes);
-        toolBar.add(btnTarefas);
-        toolBar.addSeparator();
-        toolBar.add(btnDashboard);
+        // Dashboard - todos os papéis
+        if (authService.podeAcessar(AuthorizationService.RECURSO_DASHBOARD)) {
+            if (hasItems) {
+                toolBar.addSeparator();
+            }
+            JButton btnDashboard = createToolbarButton("Dashboard", "dashboard.png", 
+                e -> controller.abrirDashboard());
+            toolBar.add(btnDashboard);
+            hasItems = true;
+        }
         
         // Espaço flexível
         toolBar.add(Box.createHorizontalGlue());
@@ -425,6 +478,56 @@ public class MainFrame extends JFrame {
         }
     }
 
+    /**
+     * Atualiza as informações do usuário na barra de status
+     */
+    private void updateUserInfo() {
+        SessionManager sessionManager = SessionManager.getInstance();
+        if (sessionManager.isSessionActive()) {
+            String userName = sessionManager.getCurrentUserName();
+            String userRole = authService.getNivelAcessoMaisAlto();
+            userLabel.setText("Usuário: " + userName + " (" + userRole + ")");
+            userLabel.setForeground(new Color(0, 100, 0)); // Verde
+        } else {
+            userLabel.setText("Não logado");
+            userLabel.setForeground(Color.RED);
+        }
+    }
+    
+    /**
+     * Atualiza os componentes da interface baseado nas permissões do usuário
+     */
+    public void atualizarPermissoes() {
+        // Remove todos os componentes dos menus e toolbar
+        menuBar.removeAll();
+        toolBar.removeAll();
+        
+        // Recria os menus e toolbar com as novas permissões
+        setupMenus();
+        setupToolBar();
+        
+        // Atualiza informações do usuário
+        updateUserInfo();
+        
+        // Revalida e repinta os componentes
+        menuBar.revalidate();
+        menuBar.repaint();
+        toolBar.revalidate();
+        toolBar.repaint();
+        statusPanel.revalidate();
+        statusPanel.repaint();
+        
+        logger.info("Interface atualizada com permissões do usuário: {}", 
+                   authService.getDescricaoPrivilegios());
+    }
+    
+    /**
+     * Verifica se o usuário pode acessar um recurso específico
+     */
+    public boolean podeAcessarRecurso(String recurso) {
+        return authService.podeAcessar(recurso);
+    }
+    
     /**
      * Obtém o desktop pane
      */

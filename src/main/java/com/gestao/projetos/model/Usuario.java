@@ -9,8 +9,10 @@ import java.util.Objects;
 public class Usuario {
     private Long id;
     private String nome;
+    private String cpf;
     private String email;
     private String cargo;
+    private String login;
     private boolean ativo;
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
@@ -26,6 +28,15 @@ public class Usuario {
         this();
         this.nome = nome;
         this.email = email;
+    }
+
+    public Usuario(String nome, String cpf, String email, String cargo, String login) {
+        this();
+        this.nome = nome;
+        this.cpf = cpf;
+        this.email = email;
+        this.cargo = cargo;
+        this.login = login;
     }
 
     // Getters e Setters
@@ -52,6 +63,33 @@ public class Usuario {
 
     public void setEmail(String email) {
         this.email = email;
+        this.atualizadoEm = LocalDateTime.now();
+    }
+
+    public String getCpf() {
+        return cpf;
+    }
+
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
+        this.atualizadoEm = LocalDateTime.now();
+    }
+
+    public String getCargo() {
+        return cargo;
+    }
+
+    public void setCargo(String cargo) {
+        this.cargo = cargo;
+        this.atualizadoEm = LocalDateTime.now();
+    }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public void setLogin(String login) {
+        this.login = login;
         this.atualizadoEm = LocalDateTime.now();
     }
 
@@ -103,7 +141,18 @@ public class Usuario {
     // Validações
     public boolean isValid() {
         return nome != null && !nome.trim().isEmpty() &&
+               cpf != null && !cpf.trim().isEmpty() &&
                email != null && !email.trim().isEmpty() &&
-               email.contains("@");
+               email.contains("@") &&
+               login != null && !login.trim().isEmpty();
+    }
+
+    /**
+     * Valida o formato do CPF (apenas números e 11 dígitos)
+     */
+    public boolean isCpfValid() {
+        if (cpf == null) return false;
+        String cpfLimpo = cpf.replaceAll("[^0-9]", "");
+        return cpfLimpo.length() == 11 && !cpfLimpo.matches("(\\d)\\1{10}"); // Não aceita CPF com todos os dígitos iguais
     }
 }

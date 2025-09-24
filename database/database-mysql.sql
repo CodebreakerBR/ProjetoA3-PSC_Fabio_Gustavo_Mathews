@@ -46,7 +46,10 @@ INSERT INTO status_tarefa (codigo, descricao) VALUES
 CREATE TABLE usuario (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
+    cpf VARCHAR(14) UNIQUE NOT NULL, -- CPF com formato: 000.000.000-00
     email VARCHAR(150) UNIQUE NOT NULL,
+    cargo VARCHAR(100),
+    login VARCHAR(50) UNIQUE NOT NULL,
     ativo BOOLEAN DEFAULT TRUE,
     
     -- Auditoria
@@ -54,6 +57,8 @@ CREATE TABLE usuario (
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_usuario_email (email),
+    INDEX idx_usuario_cpf (cpf),
+    INDEX idx_usuario_login (login),
     INDEX idx_usuario_ativo (ativo)
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -106,6 +111,24 @@ CREATE TABLE papel_permissao (
     PRIMARY KEY (papel_id, permissao_id),
     FOREIGN KEY (papel_id) REFERENCES papel(id) ON DELETE CASCADE,
     FOREIGN KEY (permissao_id) REFERENCES permissao(id) ON DELETE CASCADE
+) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Associação entre usuários e papéis
+CREATE TABLE usuario_papel (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id BIGINT NOT NULL,
+    papel_id BIGINT NOT NULL,
+    atribuido_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expira_em TIMESTAMP NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    INDEX idx_usuario_papel_usuario (usuario_id),
+    INDEX idx_usuario_papel_papel (papel_id),
+    INDEX idx_usuario_papel_ativo (ativo),
+    UNIQUE KEY unique_usuario_papel_ativo (usuario_id, papel_id, ativo),
+    
+    FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE CASCADE,
+    FOREIGN KEY (papel_id) REFERENCES papel(id) ON DELETE CASCADE
 ) ENGINE=InnoDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Projetos
@@ -377,11 +400,9 @@ GROUP BY u.id, u.nome, u.email, u.ativo, u.criado_em;
 
 -- Papéis básicos do sistema
 INSERT INTO papel (nome, descricao) VALUES
-    ('ADMIN', 'Administrador do sistema com acesso total'),
-    ('GERENTE', 'Gerente de projetos com acesso a gestão'),
-    ('DESENVOLVEDOR', 'Desenvolvedor com acesso a tarefas'),
-    ('ANALISTA', 'Analista com acesso a relatórios'),
-    ('USUARIO', 'Usuário básico do sistema');
+    ('ADMINISTRADOR', 'Administrador do sistema com acesso total'),
+    ('GERENTE', 'Gerente de projetos com acesso a gestão de projetos e equipes'),
+    ('COLABORADOR', 'Colaborador com acesso a tarefas e participação em projetos');
 
 -- Permissões básicas
 INSERT INTO permissao (chave, descricao) VALUES
@@ -400,11 +421,11 @@ INSERT INTO permissao (chave, descricao) VALUES
     ('relatorios.visualizar', 'Visualizar relatórios'),
     ('sistema.administrar', 'Administrar o sistema');
 
--- Associações papel-permissão para ADMIN
+-- Associações papel-permissão para ADMINISTRADOR
 INSERT INTO papel_permissao (papel_id, permissao_id)
 SELECT p.id, pe.id 
 FROM papel p, permissao pe 
-WHERE p.nome = 'ADMIN';
+WHERE p.nome = 'ADMINISTRADOR';
 
 -- Associações papel-permissão para GERENTE
 INSERT INTO papel_permissao (papel_id, permissao_id)
@@ -416,22 +437,26 @@ AND pe.chave IN (
     'tarefas.criar', 'tarefas.editar', 'tarefas.visualizar', 'relatorios.visualizar'
 );
 
--- Associações papel-permissão para DESENVOLVEDOR
+-- Associações papel-permissão para COLABORADOR
 INSERT INTO papel_permissao (papel_id, permissao_id)
 SELECT p.id, pe.id 
 FROM papel p, permissao pe 
-WHERE p.nome = 'DESENVOLVEDOR' 
+WHERE p.nome = 'COLABORADOR' 
 AND pe.chave IN (
     'projetos.visualizar', 'tarefas.criar', 'tarefas.editar', 'tarefas.visualizar'
 );
 
 -- Usuário administrador padrão (senha: admin123)
-INSERT INTO usuario (nome, email) VALUES 
-('Administrador', 'admin@gestao.com');
+INSERT INTO usuario (nome, cpf, email, cargo, login) VALUES 
+('Administrador do Sistema', '000.000.000-01', 'admin@gestao.com', 'Administrador', 'admin');
 
 -- Credencial para o usuário admin (hash BCrypt para 'admin123')
 INSERT INTO credencial (hash, salt, usuario_id) VALUES 
 ('$2a$10$WTbdEJbz6Wp7ofrIYwUjQ.YNG/ufAbAJqLnDMLP7mWj9D1CuZ5kPe', 'bcrypt', 1);
+
+-- Atribuir papel ADMINISTRADOR ao usuário admin
+INSERT INTO usuario_papel (usuario_id, papel_id, ativo) VALUES 
+(1, (SELECT id FROM papel WHERE nome = 'ADMINISTRADOR'), TRUE);
 
 -- =====================================================
 -- TRIGGERS (MySQL não suporta triggers PostgreSQL)

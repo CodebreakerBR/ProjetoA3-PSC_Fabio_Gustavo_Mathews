@@ -40,6 +40,17 @@ public class MainFrame extends JFrame {
         setupEventHandlers();
         setupFrame();
         updateUserInfo();
+        
+        // Abrir dashboard por padrão após inicialização
+        SwingUtilities.invokeLater(() -> {
+            try {
+                Thread.sleep(500); // Aguardar um momento para garantir que tudo foi inicializado
+                controller.abrirDashboard();
+            } catch (InterruptedException e) {
+                logger.warn("Interrupção ao aguardar para abrir dashboard", e);
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 
     /**

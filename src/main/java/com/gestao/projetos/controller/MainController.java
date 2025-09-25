@@ -180,16 +180,36 @@ public class MainController {
             mainFrame, 
             () -> {
                 try {
-                    // Implementação futura
-                    JOptionPane.showMessageDialog(
-                        mainFrame,
-                        "Dashboard será implementado em breve",
-                        "Em Desenvolvimento",
-                        JOptionPane.INFORMATION_MESSAGE
-                    );
+                    logger.info("Abrindo dashboard");
+                    
+                    // Verificar se já existe uma janela de dashboard aberta
+                    JInternalFrame[] frames = mainFrame.getDesktopPane().getAllFrames();
+                    for (JInternalFrame frame : frames) {
+                        if (frame instanceof DashboardFrame) {
+                            frame.toFront();
+                            frame.setSelected(true);
+                            logger.debug("Dashboard já estava aberto, trazendo para frente");
+                            return;
+                        }
+                    }
+                    
+                    // Criar nova janela de dashboard
+                    DashboardFrame dashboardFrame = new DashboardFrame();
+                    mainFrame.addInternalFrame(dashboardFrame);
+                    dashboardFrame.setVisible(true);
+                    
+                    mainFrame.updateStatusMessage("Dashboard aberto");
+                    logger.info("Dashboard aberto com sucesso");
                     
                 } catch (Exception e) {
                     logger.error("Erro ao abrir dashboard", e);
+                    mainFrame.updateStatusMessage("Erro ao abrir dashboard");
+                    JOptionPane.showMessageDialog(
+                        mainFrame,
+                        "Erro ao abrir dashboard: " + e.getMessage(),
+                        "Erro",
+                        JOptionPane.ERROR_MESSAGE
+                    );
                 }
             }
         );
